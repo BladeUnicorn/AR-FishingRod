@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — True 3D Pose v0.9</title>
+
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0d1820;color:#f7fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#camera,#view,#debug{position:fixed;inset:0;width:100%;height:100%}#camera{object-fit:cover}#view,#debug{pointer-events:none}#view canvas{width:100%;height:100%;display:block}#debug{z-index:3}#hud{position:fixed;z-index:4;top:calc(env(safe-area-inset-top) + 12px);left:12px;right:12px;pointer-events:none}#status{display:inline-block;max-width:100%;padding:9px 12px;background:#101c27df;border:1px solid #ffffff21;border-radius:11px;font-size:13px;line-height:1.4}#hud small{display:block;margin-top:6px;color:#d8e3ec;text-shadow:0 1px 4px black}#panel{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 10px);left:10px;right:10px;max-width:560px;margin:auto;background:#111e2ae8;border:1px solid #ffffff2a;border-radius:16px;padding:12px;backdrop-filter:blur(16px)}button{cursor:pointer;background:#25415a;color:white;border:1px solid #ffffff35;border-radius:10px;padding:11px 12px;font-size:13px;font-weight:650}button:disabled{opacity:.4}button.primary{background:#25749a}.bar{display:flex;gap:8px}.bar button{flex:1}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}.head button{padding:5px 10px}#tuning{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:9px}#tuning.collapsed{display:none}.field label{display:flex;justify-content:space-between;color:#dce7ee;font-size:12px;margin-bottom:2px}.field output{font-variant-numeric:tabular-nums;color:#8fd2ed}.field input{width:100%;accent-color:#60b7db}.help{font-size:11px;color:#aabfcf;margin:8px 0 0}.full{grid-column:1/-1}#startLayer{position:fixed;z-index:9;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0c1720f6,#1a2b3bf6);padding:22px;text-align:center}#startLayer.hidden{display:none}.intro{max-width:400px;width:100%}.intro h1{font-size:24px;margin:0 0 10px}.intro p{font-size:14px;line-height:1.65;color:#c7d8e2}.intro button{width:100%;margin-top:10px}#introError{color:#ffafa6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin-top:12px;max-height:30vh;overflow:auto}#modelName{color:#8cd4e2;font-size:12px}#reset{max-width:120px}.presetbox{border-top:1px solid #ffffff30;margin-top:12px;padding-top:11px}.presettitle{font-size:12px;font-weight:650;margin-bottom:8px;color:#dce7ee}.presetbox button{padding:9px 8px;font-size:12px}.presetbox .bar{display:flex}.presetbox input[type=text],.presetbox input:not([type]){flex:1;min-width:0;background:#172b3b;border:1px solid #ffffff35;border-radius:8px;color:white;padding:10px;font-size:12px}#panel{max-height:calc(100dvh - env(safe-area-inset-top) - 30px);overflow-y:auto}@media(max-height:620px){#panel{padding:8px}#tuning{max-height:32vh;overflow:auto}}
+</style>
+</head>
+<body>
+<video id="camera" muted autoplay playsinline></video><div id="view"></div><canvas id="debug"></canvas>
+<div id="hud"><div id="status">等待启动</div><small>单手追踪 · 三维手掌朝向 · 姿态补偿距离缩放</small></div>
+<div id="panel"><div class="head"><span id="modelName">FishingRod_Lvl1.glb</span><button id="showSettings">收起校准</button></div><div class="bar"><button id="switchCamera" disabled>切换镜头</button><button id="toggleDebug" disabled>显示关键点</button><button id="calibrate" disabled>校准当前距离</button><button id="reset">重置参数</button></div><div id="tuning">
+<div class="field"><label>基础长度 <output id="sizeOut"></output></label><input id="size" type="range" min="100" max="750" step="10" value="300"></div>
+<div class="field"><label>旋转角度 <output id="rollOut"></output></label><input id="roll" type="range" min="-180" max="180" step="1" value="0"></div>
+<div class="field"><label>水平偏移 <output id="offsetXOut"></output></label><input id="offsetX" type="range" min="-160" max="160" step="1" value="0"></div>
+<div class="field"><label>垂直偏移 <output id="offsetYOut"></output></label><input id="offsetY" type="range" min="-160" max="160" step="1" value="0"></div>
+<div class="field"><label>前后倾斜 <output id="tiltOut"></output></label><input id="tilt" type="range" min="-80" max="80" step="1" value="0"></div>
+<div class="field"><label>左右倾斜 <output id="yawOut"></output></label><input id="yaw" type="range" min="-80" max="80" step="1" value="0"></div>
+<div class="field"><label>距离缩放强度 <output id="depthOut"></output></label><input id="depth" type="range" min="0" max="200" step="5" value="100"></div>
+<div class="field"><label>跟随响应速度 <output id="speedOut"></output></label><input id="speed" type="range" min="1" max="100" step="1" value="85"></div>
+<div class="field"><label>握柄位置（沿掌心） <output id="handleOut"></output></label><input id="handle" type="range" min="-100" max="100" step="1" value="25"></div>
+<div class="field"><label>掌面深度 <output id="palmZOut"></output></label><input id="palmZ" type="range" min="-120" max="120" step="1" value="10"></div>
+<div class="help full">参数调整后会自动保存在本机浏览器。距离基准因设备摄像头不同，仍需在 iPhone 上单独校准。<br>用 worldLandmarks 三维骨架控制旋转，指向镜头时鱼竿会向镜头倾斜。距离通过二维 / 三维骨骼投影比估算，与手掌翻转解耦。手在正常距离时点击“校准当前距离”。</div>
+</div>
+<div class="presetbox">
+  <div class="presettitle">参数保存 · 跨设备同步</div>
+  <div class="bar"><button id="savePreset">保存当前参数</button><button id="copyLink">复制参数链接</button><button id="exportPreset">导出 JSON</button></div>
+  <div class="bar" style="margin-top:7px"><button id="importPreset">导入 JSON</button><button id="copyCode">复制参数码</button></div>
+  <div class="bar" style="margin-top:7px"><input id="codeInput" aria-label="从另一台设备粘贴参数码" placeholder="在 iPhone 这里粘贴 Windows 参数码"><button id="applyCode">应用参数码</button></div>
+  <input id="importFile" type="file" accept=".json,application/json" hidden>
+  <div class="help" id="saveStatus">滑块调整会自动保存在当前设备。Windows 的 localhost 链接不能在 iPhone 打开，请用 HTTPS 网站地址或参数码。</div>
+</div>
+</div></div>
+<div id="startLayer"><div class="intro"><h1>AR Fishing Rod v0.9</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并升级为三维骨架追踪。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
+<script type="module">
+const $=id=>document.getElementById(id);
+const video=$('camera'),debug=$('debug'),ctx=debug.getContext('2d'),status=$('status');
+let THREE,GLTFLoader,HandLandmarker,FilesetResolver,tracker,renderer,scene,camera,rodRig,rodModel,stream;
+let front=false,showDebug=false,started=false,videoTime=-1,lastDetect=0,lastSeen=0,wasTracking=false,lastTrackTime=0,trackingId=0;
+const smoother={position:null,rotation:null,size:null};
+let distanceBaseline=null,lastDistanceEstimate=null,latestDistanceEstimate=null,lastWorldOrientation=null;
+const defaults={size:300,roll:0,offsetX:0,offsetY:0,tilt:0,yaw:0,depth:100,speed:85,handle:25,palmZ:10};
+const config={...defaults};
+const STORAGE_KEY='AR_FISHING_ROD_V09_PRESET';
+function cleanPreset(candidate){
+ if(!candidate||typeof candidate!=='object')throw Error('参数内容格式不正确');
+ const result={};
+ for(const key of Object.keys(defaults)){
+  if(!(key in candidate))throw Error('缺少参数 '+key);
+  const number=Number(candidate[key]),control=$(key);
+  if(!Number.isFinite(number))throw Error('参数不是数字：'+key);
+  const min=Number(control.min),max=Number(control.max);
+  result[key]=Math.max(min,Math.min(max,number));
+ }
+ return result;
+}
+function saveConfig(){
+ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(config));$('saveStatus').textContent='已自动保存到本机浏览器 · '+new Date().toLocaleTimeString();}
+ catch(e){$('saveStatus').textContent='无法保存到浏览器存储：'+e.message;}
+}
+function applyPreset(obj){
+ const cleaned=cleanPreset(obj);
+ for(const key of Object.keys(defaults)){
+  $(key).value=cleaned[key];
+  $(key).dispatchEvent(new Event('input'));
+ }
+ smoother.position=null;smoother.rotation=null;smoother.size=null;
+ // Distance baseline is deliberately NOT imported across device cameras.
+ distanceBaseline=null;lastDistanceEstimate=null;
+ saveConfig();
+}
+function encodePreset(){
+ const bytes=new TextEncoder().encode(JSON.stringify(config));
+ let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
+ return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodePreset(code){
+ const cleaned=String(code||'').trim();
+ if(!/^[A-Za-z0-9_-]+$/.test(cleaned))throw Error('参数码包含无效字符');
+ const base64=cleaned.replace(/-/g,'+').replace(/_/g,'/');
+ const binary=atob(base64.padEnd(Math.ceil(base64.length/4)*4,'='));
+ const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+ return JSON.parse(new TextDecoder().decode(bytes));
+}
+async function copyText(value){
+ try{await navigator.clipboard.writeText(value);return true;}
+ catch(e){window.prompt('自动复制失败，请手动复制以下文本：',value);return false;}
+}
+for(const key of Object.keys(config)){
+ const el=$(key),out=$(key+'Out');
+ const set=()=>{
+  config[key]=Number(el.value);
+  out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':'');
+  saveConfig();
+ };
+ el.addEventListener('input',set);
+ out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':'');
+}
+try{
+ const fromURL=new URL(location.href).searchParams.get('cfg');
+ const fromLocal=localStorage.getItem(STORAGE_KEY);
+ if(fromURL){applyPreset(decodePreset(fromURL));$('saveStatus').textContent='已从分享链接导入参数并保存。请在本设备重新校准距离。';}
+ else if(fromLocal){applyPreset(JSON.parse(fromLocal));$('saveStatus').textContent='已读取本机保存的参数。';}
+}catch(e){$('saveStatus').textContent='读取旧参数失败，使用默认值：'+e.message;}
+$('savePreset').addEventListener('click',()=>{saveConfig();$('saveStatus').textContent='当前参数已保存到本机浏览器。';});
+$('copyLink').addEventListener('click',async()=>{
+ const url=new URL(location.href);url.searchParams.set('cfg',encodePreset());
+ const copied=await copyText(url.toString());
+ $('saveStatus').textContent=location.hostname==='localhost'||location.hostname==='127.0.0.1'?'已生成参数链接，但 localhost 只能在本机打开。要给 iPhone 使用，请先发布 HTTPS 网站，再从网站复制链接。':copied?'参数链接已复制：可以在 iPhone Safari 打开。':'请手动复制参数链接。';
+});
+$('copyCode').addEventListener('click',async()=>{
+ const copied=await copyText(encodePreset());
+ $('saveStatus').textContent=copied?'已复制参数码。在 iPhone 网页的输入框粘贴并点击应用。':'请手动复制参数码。';
+});
+$('applyCode').addEventListener('click',()=>{
+ try{applyPreset(decodePreset($('codeInput').value));$('saveStatus').textContent='参数码导入成功。请重新校准当前距离。';}
+ catch(e){$('saveStatus').textContent='参数码无效：'+e.message;}
+});
+$('exportPreset').addEventListener('click',()=>{
+ const blob=new Blob([JSON.stringify({app:'AR Fishing Rod',version:'0.9',config},null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='FishingRod_Preset.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ $('saveStatus').textContent='已导出 JSON 参数文件。';
+});
+$('importPreset').addEventListener('click',()=>$('importFile').click());
+$('importFile').addEventListener('change',async(e)=>{
+ const file=e.target.files[0];if(!file)return;
+ try{const data=JSON.parse(await file.text());applyPreset(data.config||data);$('saveStatus').textContent='JSON 参数导入成功。请重新校准距离。';}
+ catch(err){$('saveStatus').textContent='导入失败：'+err.message;}
+ e.target.value='';
+});
+$('reset').addEventListener('click',()=>{
+ applyPreset(defaults);distanceBaseline=null;lastDistanceEstimate=null;
+ $('saveStatus').textContent='已恢复默认参数，并自动保存。';
+});
+$('calibrate').addEventListener('click',()=>{if(latestDistanceEstimate!==null){distanceBaseline=latestDistanceEstimate;lastDistanceEstimate=latestDistanceEstimate;setStatus('距离基准已重置 · 当前手部距离对应基础长度');}});
+$('showSettings').addEventListener('click',()=>{const hidden=$('tuning').classList.toggle('collapsed');$('showSettings').textContent=hidden?'展开校准':'收起校准';});
+function setStatus(message){status.textContent=message;}
+async function loadDependencies(){
+ setStatus('正在加载 Three.js + GLTFLoader…');
+ try{THREE=await import('./vendor/three_bundle.js');GLTFLoader=THREE.GLTFLoader;}
+ catch(e){throw Error('Three.js 加载失败，请先执行 v0.9 的 setup.bat。\n'+e.message);}
+ setStatus('正在加载 MediaPipe…');
+ try{const mp=await import('./vendor/vision_bundle.mjs');HandLandmarker=mp.HandLandmarker;FilesetResolver=mp.FilesetResolver;}
+ catch(e){throw Error('MediaPipe 模块加载失败。\n'+e.message);}
+}
+function initScene(){
+ scene=new THREE.Scene();
+ camera=new THREE.OrthographicCamera(-innerWidth/2,innerWidth/2,innerHeight/2,-innerHeight/2,.1,3000);camera.position.z=1000;
+ renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0,0);renderer.outputColorSpace=THREE.SRGBColorSpace;
+ $('view').appendChild(renderer.domElement);
+ scene.add(new THREE.AmbientLight(0xffffff,2));
+ const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(-200,400,700);scene.add(sun);
+ rodRig=new THREE.Group();rodRig.visible=false;scene.add(rodRig);resize();
+}
+function resize(){
+ if(!renderer)return;
+ const w=innerWidth,h=innerHeight;
+ renderer.setSize(w,h);camera.left=-w/2;camera.right=w/2;camera.top=h/2;camera.bottom=-h/2;camera.updateProjectionMatrix();
+ debug.width=Math.floor(w*devicePixelRatio);debug.height=Math.floor(h*devicePixelRatio);ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+addEventListener('resize',resize);
+async function loadRod(){
+ setStatus('正在读取 FishingRod_Lvl1.glb…');
+ const gltf=await new GLTFLoader().loadAsync('./models/FishingRod_Lvl1.glb');rodModel=gltf.scene;
+ rodModel.traverse(obj=>{if(obj.isMesh){obj.frustumCulled=false;if(obj.material)obj.material.side=THREE.DoubleSide;}});
+ rodModel.updateMatrixWorld(true);
+ const bounds=new THREE.Box3().setFromObject(rodModel);
+ const center=bounds.getCenter(new THREE.Vector3());
+ const length=bounds.max.y-bounds.min.y;
+ if(length<0.001)throw Error('鱼竿模型的 Y 轴长度异常');
+ // The gripping point is near the bottom of the longitudinal Y axis.
+ const handleY=bounds.min.y+length*.17;
+ rodModel.position.sub(new THREE.Vector3(center.x,handleY,center.z));
+ rodRig.add(rodModel);
+ rodRig.userData.length=length;
+}
+async function loadTracker(){
+ setStatus('正在初始化单手识别…');const files=await FilesetResolver.forVisionTasks('./vendor/wasm');
+ const options={baseOptions:{modelAssetPath:'./models/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.55,minHandPresenceConfidence:.55,minTrackingConfidence:.5};
+ try{tracker=await HandLandmarker.createFromOptions(files,options);}catch(e){console.warn('GPU failed; using CPU',e);options.baseOptions.delegate='CPU';tracker=await HandLandmarker.createFromOptions(files,options);}
+}
+async function openCamera(){
+ if(stream){for(const t of stream.getTracks())t.stop();}
+ const constraints={audio:false,video:{facingMode:{ideal:front?'user':'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}};
+ stream=await navigator.mediaDevices.getUserMedia(constraints);
+ video.srcObject=stream;video.style.transform=front?'scaleX(-1)':'none';await video.play();
+ videoTime=-1;lastTrackTime=0;wasTracking=false;smoother.position=null;smoother.rotation=null;smoother.size=null;rodRig.visible=false;distanceBaseline=null;lastDistanceEstimate=null;latestDistanceEstimate=null;lastWorldOrientation=null;$('calibrate').disabled=true;
+}
+async function start(){
+ const btn=$('start');btn.disabled=true;btn.textContent='正在启动…';$('introError').textContent='';
+ try{
+  if(!navigator.mediaDevices?.getUserMedia)throw Error('摄像头需要 HTTPS 或 localhost。');
+  await loadDependencies();initScene();await loadRod();await loadTracker();await openCamera();
+  started=true;$('startLayer').classList.add('hidden');$('switchCamera').disabled=false;$('toggleDebug').disabled=false;
+  setStatus('已启动 · 将一只手放在摄像头前');
+ }catch(e){console.error(e);$('introError').textContent=e.message;setStatus('启动失败 · 请查看错误信息');btn.disabled=false;btn.textContent='重试启动';}
+}
+$('start').addEventListener('click',start);
+$('switchCamera').addEventListener('click',async()=>{const btn=$('switchCamera');btn.disabled=true;front=!front;try{await openCamera();setStatus('摄像头已切换');}catch(e){setStatus('切换摄像头失败：'+e.message);}finally{btn.disabled=false;}});
+$('toggleDebug').addEventListener('click',()=>{showDebug=!showDebug;$('toggleDebug').textContent=showDebug?'隐藏关键点':'显示关键点';if(!showDebug)ctx.clearRect(0,0,innerWidth,innerHeight);});
+function screen(p){
+ const vw=video.videoWidth||innerWidth,vh=video.videoHeight||innerHeight;const s=Math.max(innerWidth/vw,innerHeight/vh),ox=(innerWidth-vw*s)/2,oy=(innerHeight-vh*s)/2;
+ return {x:(front?1-p.x:p.x)*vw*s+ox,y:p.y*vh*s+oy};
+}
+function debugHand(points){
+ ctx.clearRect(0,0,innerWidth,innerHeight);if(!showDebug||!points)return;
+ const paths=[[0,1,2,3,4],[0,5,6,7,8],[5,9,10,11,12],[9,13,14,15,16],[13,17,18,19,20],[0,17]];
+ ctx.strokeStyle='#37e8c1';ctx.lineWidth=2.5;ctx.fillStyle='#ffffff';
+ for(const line of paths){ctx.beginPath();line.forEach((id,i)=>{const p=screen(points[id]);if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y);});ctx.stroke();}
+ for(const pt of points){const p=screen(pt);ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}
+}
+function vec3(w){return new THREE.Vector3(front?-w.x:w.x,-w.y,-w.z);}
+function median(values){const a=values.slice().sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)]:null;}
+function detectDistance(points,world){
+ // Pairs on the rigid palm only. Divide screen lengths by the corresponding
+ // camera-aligned world XY lengths, cancelling palm yaw/pitch foreshortening.
+ // Because this is single-camera inference, it is an approximate relative scale.
+ const pairs=[[0,5],[0,9],[0,17],[5,9],[9,17],[5,17],[5,13],[13,17]];
+ const ratios=[];
+ for(const [a,b] of pairs){
+  const pa=screen(points[a]),pb=screen(points[b]);
+  const observed=Math.hypot(pa.x-pb.x,pa.y-pb.y);
+  const dx=world[a].x-world[b].x,dy=world[a].y-world[b].y;
+  const projected=Math.hypot(dx,dy);
+  const real=Math.hypot(dx,dy,world[a].z-world[b].z);
+  if(projected<.010 || real<.018 || projected/real<.30 || observed<8)continue;
+  const estimate=observed/projected;
+  if(Number.isFinite(estimate)&&estimate>200&&estimate<20000)ratios.push(estimate);
+ }
+ if(ratios.length<3)return null;
+ const m=median(ratios);
+ const filtered=ratios.filter(v=>v>m*.72&&v<m*1.38);
+ return filtered.length>=3?median(filtered):null;
+}
+function handOrientation(world){
+ // The rod's local +Y follows wrist -> middle MCP in full 3D.
+ // Local +X follows index MCP -> pinky MCP, orthogonalized to +Y.
+ // Local +Z is their cross product, so flipping the palm changes the twist.
+ const wrist=vec3(world[0]);
+ const mid=vec3(world[9]);
+ const idx=vec3(world[5]);
+ const pinky=vec3(world[17]);
+ const y=mid.clone().sub(wrist);
+ if(y.length()<.025)return null;
+ y.normalize();
+ const x=pinky.clone().sub(idx);
+ x.addScaledVector(y,-x.dot(y));
+ if(x.length()<.014)return null;
+ x.normalize();
+ const z=new THREE.Vector3().crossVectors(x,y).normalize();
+ x.crossVectors(y,z).normalize();
+ const matrix=new THREE.Matrix4().makeBasis(x,y,z);
+ return new THREE.Quaternion().setFromRotationMatrix(matrix);
+}
+function track(points,world,now){
+ const wrist=screen(points[0]),index=screen(points[5]),middle=screen(points[9]),pinky=screen(points[17]);
+ const knuckle={x:(index.x+pinky.x)*.5,y:(index.y+pinky.y)*.5};
+ const palm={x:wrist.x*.38+knuckle.x*.62,y:wrist.y*.38+knuckle.y*.62};
+ // The screen projection becomes short when pointing at camera. The pose
+ // still comes from worldLandmarks, and anchor remains the actual visible palm.
+ const forward={x:knuckle.x-wrist.x,y:knuckle.y-wrist.y};
+ const fl=Math.max(1,Math.hypot(forward.x,forward.y));
+ palm.x+=forward.x/fl*config.handle;
+ palm.y+=forward.y/fl*config.handle;
+ const worldQ=world?handOrientation(world):null;
+ if(worldQ){lastWorldOrientation=worldQ.clone();}
+ const rot=(worldQ||lastWorldOrientation||new THREE.Quaternion()).clone();
+ // User calibration is LOCAL to the palm frame, not Euler additions in camera space.
+ const correction=new THREE.Quaternion().setFromEuler(new THREE.Euler(
+  config.tilt*Math.PI/180,config.yaw*Math.PI/180,config.roll*Math.PI/180,'XYZ'));
+ rot.multiply(correction);
+ const observedScale=world?detectDistance(points,world):null;
+ const dt=lastTrackTime?Math.min(.15,Math.max(.001,(now-lastTrackTime)/1000)):.05;
+ lastTrackTime=now;
+ if(observedScale!==null){
+  latestDistanceEstimate=observedScale;
+  if(distanceBaseline===null){distanceBaseline=observedScale;lastDistanceEstimate=observedScale;}
+  // Use a slower filter for distance than for position and 3D rotation.
+  const smoothed=lastDistanceEstimate??observedScale;
+  const target=THREE.MathUtils.clamp(observedScale,smoothed*.85,smoothed*1.15);
+  const alphaScale=1-Math.exp(-dt*7);
+  lastDistanceEstimate=THREE.MathUtils.lerp(smoothed,target,alphaScale);
+  $('calibrate').disabled=false;
+ }
+ const ratio=distanceBaseline&&lastDistanceEstimate?lastDistanceEstimate/distanceBaseline:1;
+ const factor=Math.pow(THREE.MathUtils.clamp(ratio,.35,3.0),config.depth/100);
+ const scale=THREE.MathUtils.clamp(config.size*factor/rodRig.userData.length,.1,1600);
+ const pos=new THREE.Vector3(palm.x-innerWidth/2+config.offsetX,innerHeight/2-palm.y-config.offsetY,config.palmZ);
+ const response=10+config.speed*.50;
+ const alpha=1-Math.exp(-dt*response);
+ if(!smoother.position){smoother.position=pos.clone();smoother.rotation=rot.clone();smoother.size=scale;}
+ else{
+  smoother.position.lerp(pos,alpha);
+  smoother.rotation.slerp(rot,alpha);
+  smoother.size+=(scale-smoother.size)*(1-Math.exp(-dt*12));
+ }
+ rodRig.position.copy(smoother.position);
+ rodRig.quaternion.copy(smoother.rotation);
+ rodRig.scale.setScalar(smoother.size);
+ rodRig.visible=true;lastSeen=now;
+ if(!wasTracking){wasTracking=true;setStatus('正在追踪 · 三维手掌方向 · 距离补偿');}
+ debugHand(points);
+}
+function tick(t){
+ requestAnimationFrame(tick);
+ if(started&&tracker&&video.readyState>=2&&video.currentTime!==videoTime&&t-lastDetect>25){
+  lastDetect=t;videoTime=video.currentTime;
+  try{
+   const result=tracker.detectForVideo(video,t);
+   if(result.landmarks?.length)track(result.landmarks[0],result.worldLandmarks?.[0]||null,t);
+   else{
+    debugHand(null);
+    if(t-lastSeen>180){rodRig.visible=false;lastTrackTime=0;smoother.position=null;smoother.rotation=null;if(wasTracking){wasTracking=false;setStatus('未检测到手');}}
+   }
+  }catch(e){console.error('Tracking error',e);setStatus('追踪错误: '+e.message);}
+ }
+ if(renderer)renderer.render(scene,camera);
+}
+requestAnimationFrame(tick);
+addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());});
+</script>
+</body></html>
