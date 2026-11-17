@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — True 3D Pose v1.0</title>
+<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — Hand Occlusion v1.1</title>
 
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0d1820;color:#f7fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#camera,#view,#debug{position:fixed;inset:0;width:100%;height:100%}#camera{object-fit:cover}#view,#debug{pointer-events:none}#view canvas{width:100%;height:100%;display:block}#debug{z-index:3}#hud{position:fixed;z-index:4;top:calc(env(safe-area-inset-top) + 12px);left:12px;right:12px;pointer-events:none}#status{display:inline-block;max-width:100%;padding:9px 12px;background:#101c27df;border:1px solid #ffffff21;border-radius:11px;font-size:13px;line-height:1.4}#hud small{display:block;margin-top:6px;color:#d8e3ec;text-shadow:0 1px 4px black}#panel{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 10px);left:10px;right:10px;max-width:560px;margin:auto;background:#111e2ae8;border:1px solid #ffffff2a;border-radius:16px;padding:12px;backdrop-filter:blur(16px)}button{cursor:pointer;background:#25415a;color:white;border:1px solid #ffffff35;border-radius:10px;padding:11px 12px;font-size:13px;font-weight:650}button:disabled{opacity:.4}button.primary{background:#25749a}.bar{display:flex;gap:8px}.bar button{flex:1}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}.head button{padding:5px 10px}#tuning{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:9px}#tuning.collapsed{display:none}.field label{display:flex;justify-content:space-between;color:#dce7ee;font-size:12px;margin-bottom:2px}.field output{font-variant-numeric:tabular-nums;color:#8fd2ed}.field input{width:100%;accent-color:#60b7db}.help{font-size:11px;color:#aabfcf;margin:8px 0 0}.full{grid-column:1/-1}#startLayer{position:fixed;z-index:9;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0c1720f6,#1a2b3bf6);padding:22px;text-align:center}#startLayer.hidden{display:none}.intro{max-width:400px;width:100%}.intro h1{font-size:24px;margin:0 0 10px}.intro p{font-size:14px;line-height:1.65;color:#c7d8e2}.intro button{width:100%;margin-top:10px}#introError{color:#ffafa6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin-top:12px;max-height:30vh;overflow:auto}#modelName{color:#8cd4e2;font-size:12px}#reset{max-width:120px}.presetbox{border-top:1px solid #ffffff30;margin-top:12px;padding-top:11px}.presettitle{font-size:12px;font-weight:650;margin-bottom:8px;color:#dce7ee}.presetbox button{padding:9px 8px;font-size:12px}.presetbox .bar{display:flex}.presetbox input[type=text],.presetbox input:not([type]){flex:1;min-width:0;background:#172b3b;border:1px solid #ffffff35;border-radius:8px;color:white;padding:10px;font-size:12px}#panel{max-height:calc(100dvh - env(safe-area-inset-top) - 30px);overflow-y:auto}@media(max-height:620px){#panel{padding:8px}#tuning{max-height:32vh;overflow:auto}}
@@ -10,7 +10,7 @@
 </head>
 <body>
 <video id="camera" muted autoplay playsinline></video><div id="view"></div><canvas id="debug"></canvas>
-<div id="hud"><div id="status">等待启动</div><small>单手追踪 · 三维手掌朝向 · 姿态补偿距离缩放</small></div>
+<div id="hud"><div id="status">等待启动</div><small>单手追踪 · 三维手掌朝向 · 手背遮挡 · 姿态补偿距离缩放</small></div>
 <div id="panel"><div class="head"><span id="modelName">FishingRod_Lvl1.glb</span><button id="showSettings">收起校准</button></div><div class="bar"><button id="switchCamera" disabled>切换镜头</button><button id="toggleDebug" disabled>显示关键点</button><button id="calibrate" disabled>校准当前距离</button><button id="reset">重置参数</button></div><div id="tuning">
 <div class="field"><label>基础长度 <output id="sizeOut"></output></label><input id="size" type="range" min="100" max="750" step="10" value="300"></div>
 <div class="field"><label>旋转角度 <output id="rollOut"></output></label><input id="roll" type="range" min="-180" max="180" step="1" value="0"></div>
@@ -22,6 +22,10 @@
 <div class="field"><label>跟随响应速度 <output id="speedOut"></output></label><input id="speed" type="range" min="1" max="100" step="1" value="85"></div>
 <div class="field"><label>握柄位置（沿掌心） <output id="handleOut"></output></label><input id="handle" type="range" min="-100" max="100" step="1" value="25"></div>
 <div class="field"><label>掌面深度 <output id="palmZOut"></output></label><input id="palmZ" type="range" min="-120" max="120" step="1" value="10"></div>
+<div class="field"><label>遮挡模式 <output id="occlusionOut"></output></label><input id="occlusion" type="range" min="0" max="2" step="1" value="1"></div>
+<div class="field"><label>反转手背判断 <output id="invertBackOut"></output></label><input id="invertBack" type="range" min="0" max="1" step="1" value="0"></div>
+<div class="field"><label>手部遮挡宽度 <output id="maskWidthOut"></output></label><input id="maskWidth" type="range" min="60" max="140" step="5" value="100"></div>
+<div class="help full">遮挡模式：0=关闭，1=仅手背，2=始终遮挡。若检测手背时鱼竿没有被挡住，先将“反转手背判断”设为 1。遮挡宽度影响手指及掌缘的遮挡范围。</div>
 <div class="help full">参数调整后会自动保存在本机浏览器。左右倾斜和前后倾斜现支持 ±180°；手机端若整体相差半圈，可尝试左右倾斜设为 +180° 或 -180°。距离基准因设备摄像头不同，仍需在 iPhone 上单独校准。<br>用 worldLandmarks 三维骨架控制旋转，指向镜头时鱼竿会向镜头倾斜。距离通过二维 / 三维骨骼投影比估算，与手掌翻转解耦。手在正常距离时点击“校准当前距离”。</div>
 </div>
 <div class="presetbox">
@@ -33,22 +37,22 @@
   <div class="help" id="saveStatus">滑块调整会自动保存在当前设备。Windows 的 localhost 链接不能在 iPhone 打开，请用 HTTPS 网站地址或参数码。</div>
 </div>
 </div></div>
-<div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.0</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并升级为三维骨架追踪。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
+<div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.1</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并升级为三维骨架追踪。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
 <script type="module">
 const $=id=>document.getElementById(id);
 const video=$('camera'),debug=$('debug'),ctx=debug.getContext('2d'),status=$('status');
-let THREE,GLTFLoader,HandLandmarker,FilesetResolver,tracker,renderer,scene,camera,rodRig,rodModel,stream;
+let THREE,GLTFLoader,HandLandmarker,FilesetResolver,tracker,renderer,scene,camera,rodRig,rodModel,stream,handOccluder;
 let front=false,showDebug=false,started=false,videoTime=-1,lastDetect=0,lastSeen=0,wasTracking=false,lastTrackTime=0,trackingId=0;
 const smoother={position:null,rotation:null,size:null};
-let distanceBaseline=null,lastDistanceEstimate=null,latestDistanceEstimate=null,lastWorldOrientation=null;
-const defaults={size:300,roll:0,offsetX:0,offsetY:0,tilt:0,yaw:0,depth:100,speed:85,handle:25,palmZ:10};
+let distanceBaseline=null,lastDistanceEstimate=null,latestDistanceEstimate=null,lastWorldOrientation=null,lastBackFacing=null,lastOcclusionState=null;
+const defaults={size:300,roll:0,offsetX:0,offsetY:0,tilt:0,yaw:0,depth:100,speed:85,handle:25,palmZ:10,occlusion:1,invertBack:0,maskWidth:100};
 const config={...defaults};
 const STORAGE_KEY='AR_FISHING_ROD_V09_PRESET';
 function cleanPreset(candidate){
  if(!candidate||typeof candidate!=='object')throw Error('参数内容格式不正确');
  const result={};
  for(const key of Object.keys(defaults)){
-  if(!(key in candidate))throw Error('缺少参数 '+key);
+  if(!(key in candidate)){result[key]=defaults[key];continue;}
   const number=Number(candidate[key]),control=$(key);
   if(!Number.isFinite(number))throw Error('参数不是数字：'+key);
   const min=Number(control.min),max=Number(control.max);
@@ -92,11 +96,11 @@ for(const key of Object.keys(config)){
  const el=$(key),out=$(key+'Out');
  const set=()=>{
   config[key]=Number(el.value);
-  out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':'');
+  out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':'');
   saveConfig();
  };
  el.addEventListener('input',set);
- out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':'');
+ out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':'');
 }
 try{
  const fromURL=new URL(location.href).searchParams.get('cfg');
@@ -119,7 +123,7 @@ $('applyCode').addEventListener('click',()=>{
  catch(e){$('saveStatus').textContent='参数码无效：'+e.message;}
 });
 $('exportPreset').addEventListener('click',()=>{
- const blob=new Blob([JSON.stringify({app:'AR Fishing Rod',version:'1.0',config},null,2)],{type:'application/json'});
+ const blob=new Blob([JSON.stringify({app:'AR Fishing Rod',version:'1.1',config},null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='FishingRod_Preset.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  $('saveStatus').textContent='已导出 JSON 参数文件。';
 });
@@ -151,6 +155,12 @@ function initScene(){
  renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0,0);renderer.outputColorSpace=THREE.SRGBColorSpace;
  $('view').appendChild(renderer.domElement);
+ // Invisible depth-writing geometry renders before the fishing rod.
+ // It masks the rod only at the hand silhouette, rather than fading the whole model.
+ const handMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,depthTest:false,side:THREE.DoubleSide});
+ handOccluder=new THREE.Mesh(new THREE.BufferGeometry(),handMaterial);
+ handOccluder.frustumCulled=false;handOccluder.renderOrder=-1000;
+ handOccluder.visible=false;scene.add(handOccluder);
  scene.add(new THREE.AmbientLight(0xffffff,2));
  const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(-200,400,700);scene.add(sun);
  rodRig=new THREE.Group();rodRig.visible=false;scene.add(rodRig);resize();
@@ -187,7 +197,7 @@ async function openCamera(){
  const constraints={audio:false,video:{facingMode:{ideal:front?'user':'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}};
  stream=await navigator.mediaDevices.getUserMedia(constraints);
  video.srcObject=stream;video.style.transform=front?'scaleX(-1)':'none';await video.play();
- videoTime=-1;lastTrackTime=0;wasTracking=false;smoother.position=null;smoother.rotation=null;smoother.size=null;rodRig.visible=false;distanceBaseline=null;lastDistanceEstimate=null;latestDistanceEstimate=null;lastWorldOrientation=null;$('calibrate').disabled=true;
+ videoTime=-1;lastTrackTime=0;wasTracking=false;smoother.position=null;smoother.rotation=null;smoother.size=null;rodRig.visible=false;distanceBaseline=null;lastDistanceEstimate=null;latestDistanceEstimate=null;lastWorldOrientation=null;lastBackFacing=null;lastOcclusionState=null;if(handOccluder)handOccluder.visible=false;$('calibrate').disabled=true;
 }
 async function start(){
  const btn=$('start');btn.disabled=true;btn.textContent='正在启动…';$('introError').textContent='';
@@ -255,7 +265,63 @@ function handOrientation(world){
  const matrix=new THREE.Matrix4().makeBasis(x,y,z);
  return new THREE.Quaternion().setFromRotationMatrix(matrix);
 }
-function track(points,world,now){
+function isBackOfHand(points,handedness){
+ // Camera-space handedness plus projected palm winding identifies which
+ // anatomical side is facing the camera. Keep the last result at edge-on poses.
+ const a=screen(points[0]),b=screen(points[5]),c=screen(points[17]);
+ const cross=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+ const span=Math.max(1,Math.hypot(b.x-c.x)*Math.hypot((b.x+c.x)*.5-a.x,(b.y+c.y)*.5-a.y));
+ const normalized=cross/span;
+ if(Math.abs(normalized)<.12&&lastBackFacing!==null)return lastBackFacing;
+ const side=handedness==='Left'?-1:1;
+ let back=normalized*side<0;
+ if(config.invertBack===1)back=!back;
+ lastBackFacing=back;
+ return back;
+}
+function updateHandOcclusion(points,handedness){
+ if(!handOccluder)return;
+ const enabled=config.occlusion===2||(config.occlusion===1&&isBackOfHand(points,handedness));
+ if(!enabled){handOccluder.visible=false;return;}
+ const p=points.map(screen),vertices=[];
+ const widthFactor=config.maskWidth/100;
+ const palmWidth=Math.max(12,Math.hypot(p[5].x-p[17].x,p[5].y-p[17].y));
+ const xOf=q=>q.x-innerWidth/2;
+ const yOf=q=>innerHeight/2-q.y;
+ const z=900;
+ function tri(a,b,c){
+  vertices.push(xOf(a),yOf(a),z,xOf(b),yOf(b),z,xOf(c),yOf(c),z);
+ }
+ function poly(points2){
+  const center={x:points2.reduce((a,p)=>a+p.x,0)/points2.length,y:points2.reduce((a,p)=>a+p.y,0)/points2.length};
+  for(let i=0;i<points2.length;i++)tri(center,points2[i],points2[(i+1)%points2.length]);
+ }
+ function capsule(a,b,widthA,widthB){
+  const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy);
+  if(l<.1)return;
+  const nx=-dy/l,ny=dx/l;
+  const aa={x:a.x+nx*widthA,y:a.y+ny*widthA};
+  const ab={x:a.x-nx*widthA,y:a.y-ny*widthA};
+  const ba={x:b.x+nx*widthB,y:b.y+ny*widthB};
+  const bb={x:b.x-nx*widthB,y:b.y-ny*widthB};
+  tri(aa,ab,ba);tri(ab,bb,ba);
+ }
+ // Palm silhouette, bounded by wrist, thumb base and knuckles.
+ poly([p[0],p[1],p[2],p[5],p[9],p[13],p[17]]);
+ // Individual finger bands, rather than one huge convex hull: gaps remain visible.
+ for(const chain of [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]]){
+  for(let i=0;i<chain.length-1;i++){
+   const w=palmWidth*(i===0?.105:i===1?.085:.068)*widthFactor;
+   capsule(p[chain[i]],p[chain[i+1]],w,w*.87);
+  }
+ }
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ handOccluder.geometry.dispose();handOccluder.geometry=geometry;
+ handOccluder.visible=true;
+}
+function track(points,world,now,handedness){
+ updateHandOcclusion(points,handedness);
  const wrist=screen(points[0]),index=screen(points[5]),middle=screen(points[9]),pinky=screen(points[17]);
  const knuckle={x:(index.x+pinky.x)*.5,y:(index.y+pinky.y)*.5};
  const palm={x:wrist.x*.38+knuckle.x*.62,y:wrist.y*.38+knuckle.y*.62};
@@ -301,7 +367,8 @@ function track(points,world,now){
  rodRig.quaternion.copy(smoother.rotation);
  rodRig.scale.setScalar(smoother.size);
  rodRig.visible=true;lastSeen=now;
- if(!wasTracking){wasTracking=true;setStatus('正在追踪 · 三维手掌方向 · 距离补偿');}
+ const occlusionText=!handOccluder.visible?'无遮挡':config.occlusion===2?'始终遮挡':'手背遮挡';
+ if(!wasTracking||lastOcclusionState!==occlusionText){wasTracking=true;lastOcclusionState=occlusionText;setStatus('正在追踪 · '+occlusionText+' · 3D 朝向');}
  debugHand(points);
 }
 function tick(t){
@@ -310,10 +377,10 @@ function tick(t){
   lastDetect=t;videoTime=video.currentTime;
   try{
    const result=tracker.detectForVideo(video,t);
-   if(result.landmarks?.length)track(result.landmarks[0],result.worldLandmarks?.[0]||null,t);
+   if(result.landmarks?.length)track(result.landmarks[0],result.worldLandmarks?.[0]||null,t,result.handednesses?.[0]?.[0]?.categoryName||'Right');
    else{
     debugHand(null);
-    if(t-lastSeen>180){rodRig.visible=false;lastTrackTime=0;smoother.position=null;smoother.rotation=null;if(wasTracking){wasTracking=false;setStatus('未检测到手');}}
+    if(t-lastSeen>180){rodRig.visible=false;if(handOccluder)handOccluder.visible=false;lastBackFacing=null;lastOcclusionState=null;lastTrackTime=0;smoother.position=null;smoother.rotation=null;if(wasTracking){wasTracking=false;setStatus('未检测到手');}}
    }
   }catch(e){console.error('Tracking error',e);setStatus('追踪错误: '+e.message);}
  }
