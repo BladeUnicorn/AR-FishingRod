@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — True 3D Pose v0.9</title>
+<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — True 3D Pose v1.0</title>
 
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0d1820;color:#f7fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#camera,#view,#debug{position:fixed;inset:0;width:100%;height:100%}#camera{object-fit:cover}#view,#debug{pointer-events:none}#view canvas{width:100%;height:100%;display:block}#debug{z-index:3}#hud{position:fixed;z-index:4;top:calc(env(safe-area-inset-top) + 12px);left:12px;right:12px;pointer-events:none}#status{display:inline-block;max-width:100%;padding:9px 12px;background:#101c27df;border:1px solid #ffffff21;border-radius:11px;font-size:13px;line-height:1.4}#hud small{display:block;margin-top:6px;color:#d8e3ec;text-shadow:0 1px 4px black}#panel{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 10px);left:10px;right:10px;max-width:560px;margin:auto;background:#111e2ae8;border:1px solid #ffffff2a;border-radius:16px;padding:12px;backdrop-filter:blur(16px)}button{cursor:pointer;background:#25415a;color:white;border:1px solid #ffffff35;border-radius:10px;padding:11px 12px;font-size:13px;font-weight:650}button:disabled{opacity:.4}button.primary{background:#25749a}.bar{display:flex;gap:8px}.bar button{flex:1}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}.head button{padding:5px 10px}#tuning{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:9px}#tuning.collapsed{display:none}.field label{display:flex;justify-content:space-between;color:#dce7ee;font-size:12px;margin-bottom:2px}.field output{font-variant-numeric:tabular-nums;color:#8fd2ed}.field input{width:100%;accent-color:#60b7db}.help{font-size:11px;color:#aabfcf;margin:8px 0 0}.full{grid-column:1/-1}#startLayer{position:fixed;z-index:9;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0c1720f6,#1a2b3bf6);padding:22px;text-align:center}#startLayer.hidden{display:none}.intro{max-width:400px;width:100%}.intro h1{font-size:24px;margin:0 0 10px}.intro p{font-size:14px;line-height:1.65;color:#c7d8e2}.intro button{width:100%;margin-top:10px}#introError{color:#ffafa6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin-top:12px;max-height:30vh;overflow:auto}#modelName{color:#8cd4e2;font-size:12px}#reset{max-width:120px}.presetbox{border-top:1px solid #ffffff30;margin-top:12px;padding-top:11px}.presettitle{font-size:12px;font-weight:650;margin-bottom:8px;color:#dce7ee}.presetbox button{padding:9px 8px;font-size:12px}.presetbox .bar{display:flex}.presetbox input[type=text],.presetbox input:not([type]){flex:1;min-width:0;background:#172b3b;border:1px solid #ffffff35;border-radius:8px;color:white;padding:10px;font-size:12px}#panel{max-height:calc(100dvh - env(safe-area-inset-top) - 30px);overflow-y:auto}@media(max-height:620px){#panel{padding:8px}#tuning{max-height:32vh;overflow:auto}}
@@ -16,13 +16,13 @@
 <div class="field"><label>旋转角度 <output id="rollOut"></output></label><input id="roll" type="range" min="-180" max="180" step="1" value="0"></div>
 <div class="field"><label>水平偏移 <output id="offsetXOut"></output></label><input id="offsetX" type="range" min="-160" max="160" step="1" value="0"></div>
 <div class="field"><label>垂直偏移 <output id="offsetYOut"></output></label><input id="offsetY" type="range" min="-160" max="160" step="1" value="0"></div>
-<div class="field"><label>前后倾斜 <output id="tiltOut"></output></label><input id="tilt" type="range" min="-80" max="80" step="1" value="0"></div>
-<div class="field"><label>左右倾斜 <output id="yawOut"></output></label><input id="yaw" type="range" min="-80" max="80" step="1" value="0"></div>
+<div class="field"><label>前后倾斜 <output id="tiltOut"></output></label><input id="tilt" type="range" min="-180" max="180" step="1" value="0"></div>
+<div class="field"><label>左右倾斜 <output id="yawOut"></output></label><input id="yaw" type="range" min="-180" max="180" step="1" value="0"></div>
 <div class="field"><label>距离缩放强度 <output id="depthOut"></output></label><input id="depth" type="range" min="0" max="200" step="5" value="100"></div>
 <div class="field"><label>跟随响应速度 <output id="speedOut"></output></label><input id="speed" type="range" min="1" max="100" step="1" value="85"></div>
 <div class="field"><label>握柄位置（沿掌心） <output id="handleOut"></output></label><input id="handle" type="range" min="-100" max="100" step="1" value="25"></div>
 <div class="field"><label>掌面深度 <output id="palmZOut"></output></label><input id="palmZ" type="range" min="-120" max="120" step="1" value="10"></div>
-<div class="help full">参数调整后会自动保存在本机浏览器。距离基准因设备摄像头不同，仍需在 iPhone 上单独校准。<br>用 worldLandmarks 三维骨架控制旋转，指向镜头时鱼竿会向镜头倾斜。距离通过二维 / 三维骨骼投影比估算，与手掌翻转解耦。手在正常距离时点击“校准当前距离”。</div>
+<div class="help full">参数调整后会自动保存在本机浏览器。左右倾斜和前后倾斜现支持 ±180°；手机端若整体相差半圈，可尝试左右倾斜设为 +180° 或 -180°。距离基准因设备摄像头不同，仍需在 iPhone 上单独校准。<br>用 worldLandmarks 三维骨架控制旋转，指向镜头时鱼竿会向镜头倾斜。距离通过二维 / 三维骨骼投影比估算，与手掌翻转解耦。手在正常距离时点击“校准当前距离”。</div>
 </div>
 <div class="presetbox">
   <div class="presettitle">参数保存 · 跨设备同步</div>
@@ -33,7 +33,7 @@
   <div class="help" id="saveStatus">滑块调整会自动保存在当前设备。Windows 的 localhost 链接不能在 iPhone 打开，请用 HTTPS 网站地址或参数码。</div>
 </div>
 </div></div>
-<div id="startLayer"><div class="intro"><h1>AR Fishing Rod v0.9</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并升级为三维骨架追踪。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
+<div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.0</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并升级为三维骨架追踪。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
 <script type="module">
 const $=id=>document.getElementById(id);
 const video=$('camera'),debug=$('debug'),ctx=debug.getContext('2d'),status=$('status');
@@ -119,7 +119,7 @@ $('applyCode').addEventListener('click',()=>{
  catch(e){$('saveStatus').textContent='参数码无效：'+e.message;}
 });
 $('exportPreset').addEventListener('click',()=>{
- const blob=new Blob([JSON.stringify({app:'AR Fishing Rod',version:'0.9',config},null,2)],{type:'application/json'});
+ const blob=new Blob([JSON.stringify({app:'AR Fishing Rod',version:'1.0',config},null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='FishingRod_Preset.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  $('saveStatus').textContent='已导出 JSON 参数文件。';
 });
