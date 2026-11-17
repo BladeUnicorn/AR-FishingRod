@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — Segmentation Occlusion v1.2</title>
+<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — Temporal Occlusion v1.3</title>
 
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0d1820;color:#f7fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#camera,#view,#debug{position:fixed;inset:0;width:100%;height:100%}#camera{object-fit:cover}#view,#debug,#handLayer{pointer-events:none}#handLayer{position:fixed;inset:0;width:100%;height:100%;z-index:2}#view canvas{width:100%;height:100%;display:block}#debug{z-index:3}#hud{position:fixed;z-index:4;top:calc(env(safe-area-inset-top) + 12px);left:12px;right:12px;pointer-events:none}#status{display:inline-block;max-width:100%;padding:9px 12px;background:#101c27df;border:1px solid #ffffff21;border-radius:11px;font-size:13px;line-height:1.4}#hud small{display:block;margin-top:6px;color:#d8e3ec;text-shadow:0 1px 4px black}#panel{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 10px);left:10px;right:10px;max-width:560px;margin:auto;background:#111e2ae8;border:1px solid #ffffff2a;border-radius:16px;padding:12px;backdrop-filter:blur(16px)}button{cursor:pointer;background:#25415a;color:white;border:1px solid #ffffff35;border-radius:10px;padding:11px 12px;font-size:13px;font-weight:650}button:disabled{opacity:.4}button.primary{background:#25749a}.bar{display:flex;gap:8px}.bar button{flex:1}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}.head button{padding:5px 10px}#tuning{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:9px}#tuning.collapsed{display:none}.field label{display:flex;justify-content:space-between;color:#dce7ee;font-size:12px;margin-bottom:2px}.field output{font-variant-numeric:tabular-nums;color:#8fd2ed}.field input{width:100%;accent-color:#60b7db}.help{font-size:11px;color:#aabfcf;margin:8px 0 0}.full{grid-column:1/-1}#startLayer{position:fixed;z-index:9;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0c1720f6,#1a2b3bf6);padding:22px;text-align:center}#startLayer.hidden{display:none}.intro{max-width:400px;width:100%}.intro h1{font-size:24px;margin:0 0 10px}.intro p{font-size:14px;line-height:1.65;color:#c7d8e2}.intro button{width:100%;margin-top:10px}#introError{color:#ffafa6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin-top:12px;max-height:30vh;overflow:auto}#modelName{color:#8cd4e2;font-size:12px}#reset{max-width:120px}.presetbox{border-top:1px solid #ffffff30;margin-top:12px;padding-top:11px}.presettitle{font-size:12px;font-weight:650;margin-bottom:8px;color:#dce7ee}.presetbox button{padding:9px 8px;font-size:12px}.presetbox .bar{display:flex}.presetbox input[type=text],.presetbox input:not([type]){flex:1;min-width:0;background:#172b3b;border:1px solid #ffffff35;border-radius:8px;color:white;padding:10px;font-size:12px}#panel{max-height:calc(100dvh - env(safe-area-inset-top) - 30px);overflow-y:auto}@media(max-height:620px){#panel{padding:8px}#tuning{max-height:32vh;overflow:auto}}
@@ -25,8 +25,10 @@
 <div class="field"><label>遮挡模式 <output id="occlusionOut"></output></label><input id="occlusion" type="range" min="0" max="2" step="1" value="1"></div>
 <div class="field"><label>反转手背判断 <output id="invertBackOut"></output></label><input id="invertBack" type="range" min="0" max="1" step="1" value="0"></div>
 <div class="field"><label>显示蒙版调试 <output id="maskPreviewOut"></output></label><input id="maskPreview" type="range" min="0" max="1" step="1" value="0"></div>
+<div class="field"><label>分割更新间隔 <output id="segIntervalOut"></output></label><input id="segInterval" type="range" min="60" max="260" step="10" value="100"></div>
+<div class="field"><label>运动补偿 <output id="motionCompOut"></output></label><input id="motionComp" type="range" min="0" max="1" step="1" value="1"></div>
 <div class="field"><label>手部遮挡宽度 <output id="maskWidthOut"></output></label><input id="maskWidth" type="range" min="60" max="140" step="5" value="100"></div>
-<div class="help full">遮挡模式：0=关闭，1=仅手背，2=始终遮挡。若检测手背时鱼竿没有被挡住，先将“反转手背判断”设为 1。遮挡宽度影响手指及掌缘的遮挡范围。开启「显示蒙版调试」可将识别到的手部区域标成绿色。分割模型会识别皮肤，但并不是专用手部实例模型。</div>
+<div class="help full">遮挡模式：0=关闭，1=仅手背，2=始终遮挡。若检测手背时鱼竿没有被挡住，先将“反转手背判断”设为 1。遮挡宽度影响手指及掌缘的遮挡范围。「运动补偿」会将分割瞬间捕获的手部图像跟随最新手部骨骼变换；「分割更新间隔」越短，延迟可能越小，但 iPhone CPU/GPU 负担更高。开启「显示蒙版调试」可将识别到的手部区域标成绿色。分割模型会识别皮肤，但并不是专用手部实例模型。</div>
 <div class="help full">参数调整后会自动保存在本机浏览器。左右倾斜和前后倾斜现支持 ±180°；手机端若整体相差半圈，可尝试左右倾斜设为 +180° 或 -180°。距离基准因设备摄像头不同，仍需在 iPhone 上单独校准。<br>用 worldLandmarks 三维骨架控制旋转，指向镜头时鱼竿会向镜头倾斜。距离通过二维 / 三维骨骼投影比估算，与手掌翻转解耦。手在正常距离时点击“校准当前距离”。</div>
 </div>
 <div class="presetbox">
@@ -38,7 +40,7 @@
   <div class="help" id="saveStatus">滑块调整会自动保存在当前设备。Windows 的 localhost 链接不能在 iPhone 打开，请用 HTTPS 网站地址或参数码。</div>
 </div>
 </div></div>
-<div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.2</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并升级为三维骨架追踪。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
+<div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.3</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并升级为三维骨架追踪。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
 <script type="module">
 const $=id=>document.getElementById(id);
 const video=$('camera'),debug=$('debug'),ctx=debug.getContext('2d'),status=$('status');
@@ -48,11 +50,13 @@ let front=false,showDebug=false,started=false,videoTime=-1,lastDetect=0,lastSeen
 const smoother={position:null,rotation:null,size:null};
 let distanceBaseline=null,lastDistanceEstimate=null,latestDistanceEstimate=null,lastWorldOrientation=null,lastBackFacing=null,lastOcclusionState=null;
 let lastSeg=0,segMask=null,segWidth=0,segHeight=0,segReady=false,segStatus='尚未加载';
+let segAnchor=null,segTimestamp=0,segCapturedFrame=-1;
+const cachedHandCanvas=document.createElement('canvas'),cachedHandCtx=cachedHandCanvas.getContext('2d');
 let lastHandPoints=null,lastHandedness='Right';
 const maskCanvas=document.createElement('canvas'),maskCtx=maskCanvas.getContext('2d',{willReadFrequently:true});
 const roiCanvas=document.createElement('canvas'),roiCtx=roiCanvas.getContext('2d');
 const compositeCanvas=document.createElement('canvas'),compositeCtx=compositeCanvas.getContext('2d');
-const defaults={size:300,roll:0,offsetX:0,offsetY:0,tilt:0,yaw:0,depth:100,speed:85,handle:25,palmZ:10,occlusion:1,invertBack:0,maskWidth:115,maskPreview:0};
+const defaults={size:300,roll:0,offsetX:0,offsetY:0,tilt:0,yaw:0,depth:100,speed:85,handle:25,palmZ:10,occlusion:1,invertBack:0,maskWidth:115,maskPreview:0,segInterval:100,motionComp:1};
 const config={...defaults};
 const STORAGE_KEY='AR_FISHING_ROD_V09_PRESET';
 function cleanPreset(candidate){
@@ -103,11 +107,11 @@ for(const key of Object.keys(config)){
  const el=$(key),out=$(key+'Out');
  const set=()=>{
   config[key]=Number(el.value);
-  out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':'');
+  out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':key==='segInterval'?' ms':key==='motionComp'?' (0关/1开)':'');
   saveConfig();
  };
  el.addEventListener('input',set);
- out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':'');
+ out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':key==='segInterval'?' ms':key==='motionComp'?' (0关/1开)':'');
 }
 try{
  const fromURL=new URL(location.href).searchParams.get('cfg');
@@ -130,7 +134,7 @@ $('applyCode').addEventListener('click',()=>{
  catch(e){$('saveStatus').textContent='参数码无效：'+e.message;}
 });
 $('exportPreset').addEventListener('click',()=>{
- const blob=new Blob([JSON.stringify({app:'AR Fishing Rod',version:'1.2',config},null,2)],{type:'application/json'});
+ const blob=new Blob([JSON.stringify({app:'AR Fishing Rod',version:'1.3',config},null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='FishingRod_Preset.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  $('saveStatus').textContent='已导出 JSON 参数文件。';
 });
@@ -170,7 +174,7 @@ function resize(){
  if(!renderer)return;
  const w=innerWidth,h=innerHeight;
  renderer.setSize(w,h);camera.left=-w/2;camera.right=w/2;camera.top=h/2;camera.bottom=-h/2;camera.updateProjectionMatrix();
- handLayer.width=w;handLayer.height=h;roiCanvas.width=w;roiCanvas.height=h;compositeCanvas.width=w;compositeCanvas.height=h;
+ handLayer.width=w;handLayer.height=h;roiCanvas.width=w;roiCanvas.height=h;compositeCanvas.width=w;compositeCanvas.height=h;cachedHandCanvas.width=w;cachedHandCanvas.height=h;segReady=false;segAnchor=null;
  debug.width=Math.floor(w*devicePixelRatio);debug.height=Math.floor(h*devicePixelRatio);ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
 }
 addEventListener('resize',resize);
@@ -207,7 +211,7 @@ async function openCamera(){
  const constraints={audio:false,video:{facingMode:{ideal:front?'user':'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}}};
  stream=await navigator.mediaDevices.getUserMedia(constraints);
  video.srcObject=stream;video.style.transform=front?'scaleX(-1)':'none';await video.play();
- videoTime=-1;lastTrackTime=0;wasTracking=false;smoother.position=null;smoother.rotation=null;smoother.size=null;rodRig.visible=false;distanceBaseline=null;lastDistanceEstimate=null;latestDistanceEstimate=null;lastWorldOrientation=null;lastBackFacing=null;lastOcclusionState=null;lastHandPoints=null;segReady=false;segMask=null;lastSeg=0;handCtx.clearRect(0,0,innerWidth,innerHeight);$('calibrate').disabled=true;
+ videoTime=-1;lastTrackTime=0;wasTracking=false;smoother.position=null;smoother.rotation=null;smoother.size=null;rodRig.visible=false;distanceBaseline=null;lastDistanceEstimate=null;latestDistanceEstimate=null;lastWorldOrientation=null;lastBackFacing=null;lastOcclusionState=null;lastHandPoints=null;segReady=false;segMask=null;lastSeg=0;segAnchor=null;segCapturedFrame=-1;handCtx.clearRect(0,0,innerWidth,innerHeight);$('calibrate').disabled=true;
 }
 async function start(){
  const btn=$('start');btn.disabled=true;btn.textContent='正在启动…';$('introError').textContent='';
@@ -309,14 +313,48 @@ function handROI(points){
  // Grip area around the wrist and MCPs, slightly inflated for imperfect segmentation.
  return p;
 }
+function anchorFromPoints(points){
+ const pts=points.map(screen);
+ const center={x:pts[0].x*.30+(pts[5].x+pts[17].x)*.35,y:pts[0].y*.30+(pts[5].y+pts[17].y)*.35};
+ const dir={x:(pts[5].x+pts[17].x)*.5-pts[0].x,y:(pts[5].y+pts[17].y)*.5-pts[0].y};
+ const span=Math.hypot(pts[5].x-pts[17].x,pts[5].y-pts[17].y);
+ return {x:center.x,y:center.y,angle:Math.atan2(dir.y,dir.x),span:Math.max(1,span)};
+}
+function renderCapturedHand(points){
+ const w=innerWidth,h=innerHeight,vw=video.videoWidth,vh=video.videoHeight;
+ const scale=Math.max(w/vw,h/vh),drawW=vw*scale,drawH=vh*scale;
+ const dx=(w-drawW)/2,dy=(h-drawH)/2;
+ handROI(points);
+ compositeCtx.setTransform(1,0,0,1,0,0);
+ compositeCtx.globalCompositeOperation='source-over';
+ compositeCtx.clearRect(0,0,w,h);
+ compositeCtx.save();
+ if(front){compositeCtx.translate(w,0);compositeCtx.scale(-1,1);}
+ compositeCtx.drawImage(video,dx,dy,drawW,drawH);
+ compositeCtx.globalCompositeOperation='destination-in';
+ compositeCtx.imageSmoothingEnabled=true;
+ compositeCtx.filter='blur(1px)';
+ compositeCtx.drawImage(maskCanvas,dx,dy,drawW,drawH);
+ compositeCtx.restore();
+ compositeCtx.globalCompositeOperation='destination-in';
+ compositeCtx.drawImage(roiCanvas,0,0,w,h);
+ compositeCtx.globalCompositeOperation='source-over';
+ cachedHandCtx.setTransform(1,0,0,1,0,0);
+ cachedHandCtx.clearRect(0,0,w,h);
+ cachedHandCtx.drawImage(compositeCanvas,0,0);
+}
 function updateSegmentation(t){
- if(!segmenter||!lastHandPoints||video.readyState<2||t-lastSeg<145)return;
+ if(!segmenter||!lastHandPoints||video.readyState<2||t-lastSeg<config.segInterval)return;
+ if(video.currentTime===segCapturedFrame)return;
  lastSeg=t;
  try{
+  const sampledPoints=lastHandPoints.map(p=>({...p}));
+  const sampledFrame=video.currentTime;
   const result=segmenter.segmentForVideo(video,t);
   const mask=result.categoryMask;
   if(mask){
-   segWidth=mask.width;segHeight=mask.height;segMask=new Uint8Array(mask.getAsUint8Array());segReady=true;
+   segWidth=mask.width;segHeight=mask.height;
+   segMask=new Uint8Array(mask.getAsUint8Array());
    if(maskCanvas.width!==segWidth||maskCanvas.height!==segHeight){maskCanvas.width=segWidth;maskCanvas.height=segHeight;}
    const img=maskCtx.createImageData(segWidth,segHeight);
    for(let i=0;i<segMask.length;i++){
@@ -324,35 +362,46 @@ function updateSegmentation(t){
     img.data[j+3]=(segMask[i]===2||segMask[i]===3)?255:0;
    }
    maskCtx.putImageData(img,0,0);
+   renderCapturedHand(sampledPoints);
+   segAnchor=anchorFromPoints(sampledPoints);
+   segTimestamp=performance.now();
+   segCapturedFrame=sampledFrame;
+   segReady=true;
   }
   if(typeof result.close==='function')result.close();
  }catch(e){console.warn('Segmentation failure',e);segStatus='分割错误: '+e.message;}
 }
 function compositeHand(){
  const w=innerWidth,h=innerHeight;
+ handCtx.setTransform(1,0,0,1,0,0);
+ handCtx.globalAlpha=1;
  handCtx.clearRect(0,0,w,h);
- if(!lastHandPoints||!rodRig?.visible||!segReady||!segMask||config.occlusion===0)return;
+ if(!lastHandPoints||!rodRig?.visible||!segReady||!segAnchor||config.occlusion===0)return;
  const enabled=config.occlusion===2||(config.occlusion===1&&isBackOfHand(lastHandPoints,lastHandedness));
  if(!enabled)return;
- handROI(lastHandPoints);
- const vw=video.videoWidth,vh=video.videoHeight;
- const scale=Math.max(w/vw,h/vh),drawW=vw*scale,drawH=vh*scale;
- const dx=(w-drawW)/2,dy=(h-drawH)/2;
- compositeCtx.setTransform(1,0,0,1,0,0);compositeCtx.clearRect(0,0,w,h);
- compositeCtx.save();
- if(front){compositeCtx.translate(w,0);compositeCtx.scale(-1,1);}
- compositeCtx.drawImage(video,dx,dy,drawW,drawH);
- compositeCtx.globalCompositeOperation='destination-in';
- compositeCtx.imageSmoothingEnabled=true;
- // Slight blur softens low-resolution segmentation boundaries.
- compositeCtx.filter='blur(1px)';
- compositeCtx.drawImage(maskCanvas,dx,dy,drawW,drawH);
- compositeCtx.filter='none';compositeCtx.restore();
- compositeCtx.globalCompositeOperation='destination-in';
- compositeCtx.drawImage(roiCanvas,0,0,w,h);compositeCtx.globalCompositeOperation='source-over';
- handCtx.drawImage(compositeCanvas,0,0);
+ const elapsed=performance.now()-segTimestamp;
+ if(elapsed>520)return;
+ const current=anchorFromPoints(lastHandPoints);
+ const alpha=elapsed>320?Math.max(0,1-(elapsed-320)/200):1;
+ handCtx.globalAlpha=alpha;
+ if(config.motionComp===1){
+  let angle=current.angle-segAnchor.angle;
+  angle=Math.atan2(Math.sin(angle),Math.cos(angle));
+  angle=Math.max(-.65,Math.min(.65,angle));
+  const ratio=Math.max(.78,Math.min(1.28,current.span/segAnchor.span));
+  handCtx.translate(current.x,current.y);
+  handCtx.rotate(angle);
+  handCtx.scale(ratio,ratio);
+  handCtx.translate(-segAnchor.x,-segAnchor.y);
+ }
+ handCtx.drawImage(cachedHandCanvas,0,0);
+ handCtx.setTransform(1,0,0,1,0,0);
+ handCtx.globalAlpha=1;
  if(config.maskPreview===1){
-  handCtx.globalCompositeOperation='source-atop';handCtx.fillStyle='rgba(0,255,110,.45)';handCtx.fillRect(0,0,w,h);handCtx.globalCompositeOperation='source-over';
+  handCtx.globalCompositeOperation='source-atop';
+  handCtx.fillStyle='rgba(0,255,110,.45)';
+  handCtx.fillRect(0,0,w,h);
+  handCtx.globalCompositeOperation='source-over';
  }
 }
 function track(points,world,now,handedness){
