@@ -2,16 +2,53 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — MANIFESTO Water v1.4</title>
+<meta name="theme-color" content="#0d1820"><title>AR Fishing Rod — Mobile Calibration v1.6</title>
 
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0d1820;color:#f7fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#camera,#view,#debug{position:fixed;inset:0;width:100%;height:100%}#camera{object-fit:cover}#view,#debug,#handLayer{pointer-events:none}#handLayer{position:fixed;inset:0;width:100%;height:100%;z-index:2}#view canvas{width:100%;height:100%;display:block}#debug{z-index:3}#hud{position:fixed;z-index:4;top:calc(env(safe-area-inset-top) + 12px);left:12px;right:12px;pointer-events:none}#status{display:inline-block;max-width:100%;padding:9px 12px;background:#101c27df;border:1px solid #ffffff21;border-radius:11px;font-size:13px;line-height:1.4}#hud small{display:block;margin-top:6px;color:#d8e3ec;text-shadow:0 1px 4px black}#panel{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom) + 10px);left:10px;right:10px;max-width:560px;margin:auto;background:#111e2ae8;border:1px solid #ffffff2a;border-radius:16px;padding:12px;backdrop-filter:blur(16px)}button{cursor:pointer;background:#25415a;color:white;border:1px solid #ffffff35;border-radius:10px;padding:11px 12px;font-size:13px;font-weight:650}button:disabled{opacity:.4}button.primary{background:#25749a}.bar{display:flex;gap:8px}.bar button{flex:1}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}.head button{padding:5px 10px}#tuning{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:9px}#tuning.collapsed{display:none}.field label{display:flex;justify-content:space-between;color:#dce7ee;font-size:12px;margin-bottom:2px}.field output{font-variant-numeric:tabular-nums;color:#8fd2ed}.field input{width:100%;accent-color:#60b7db}.help{font-size:11px;color:#aabfcf;margin:8px 0 0}.full{grid-column:1/-1}#startLayer{position:fixed;z-index:9;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0c1720f6,#1a2b3bf6);padding:22px;text-align:center}#startLayer.hidden{display:none}.intro{max-width:400px;width:100%}.intro h1{font-size:24px;margin:0 0 10px}.intro p{font-size:14px;line-height:1.65;color:#c7d8e2}.intro button{width:100%;margin-top:10px}#introError{color:#ffafa6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;margin-top:12px;max-height:30vh;overflow:auto}#modelName{color:#8cd4e2;font-size:12px}#reset{max-width:120px}.presetbox{border-top:1px solid #ffffff30;margin-top:12px;padding-top:11px}.presettitle{font-size:12px;font-weight:650;margin-bottom:8px;color:#dce7ee}.presetbox button{padding:9px 8px;font-size:12px}.presetbox .bar{display:flex}.presetbox input[type=text],.presetbox input:not([type]){flex:1;min-width:0;background:#172b3b;border:1px solid #ffffff35;border-radius:8px;color:white;padding:10px;font-size:12px}#panel{max-height:calc(100dvh - env(safe-area-inset-top) - 30px);overflow-y:auto}@media(max-height:620px){#panel{padding:8px}#tuning{max-height:32vh;overflow:auto}}
+
+/* v1.6: compact touch-friendly calibration sheet */
+.headButtons{display:flex;gap:6px;align-items:center}.headButtons button{white-space:nowrap}
+#mobileTabs{display:none}#dockPanel{display:none}
+@media(max-width:700px){
+ #panel{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);top:auto;margin:0 auto;max-width:520px;padding:8px 10px 10px;max-height:min(36dvh,310px);overflow:hidden;display:flex;flex-direction:column;background:#0d1d2be6;border-radius:14px;box-shadow:0 3px 20px #0008}
+ #panel.mobile-top{bottom:auto;top:calc(env(safe-area-inset-top) + 10px)}
+ #panel.mobile-collapsed{max-height:none;width:max-content;min-width:185px;max-width:calc(100% - 16px);left:auto;right:8px;padding:5px 8px}
+ #panel.mobile-collapsed .head{margin:0;gap:12px}
+ #panel.mobile-collapsed #mobileTabs,#panel.mobile-collapsed #tuning,#panel.mobile-collapsed .presetbox,#panel.mobile-collapsed>.bar{display:none!important}
+ #panel.mobile-collapsed #modelName{font-size:11px;max-width:125px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .head{flex:none;margin-bottom:5px;min-height:25px;touch-action:none;cursor:grab}
+ .head button{padding:6px 8px;font-size:11px}#dockPanel{display:inline-block}
+ #panel>.bar{flex:none;gap:4px;margin-bottom:5px}
+ #panel>.bar button{font-size:10px;padding:7px 2px;min-width:0}
+ #mobileTabs{display:flex;flex:none;overflow-x:auto;gap:5px;scrollbar-width:none;touch-action:pan-x;padding-bottom:4px}
+ #mobileTabs::-webkit-scrollbar{display:none}
+ #mobileTabs button{white-space:nowrap;flex:none;font-size:11px;padding:6px 9px;border-radius:99px;background:#24425a}
+ #mobileTabs button.active{background:#1e8cb1;border-color:#8cd8eb}
+ #tuning{display:grid;grid-template-columns:1fr 1fr;gap:8px 9px;overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:5px 2px 16px;margin:0;align-content:start}
+ #tuning .field{min-width:0}
+ #tuning .field label{font-size:11px;gap:3px}
+ #tuning .field output{white-space:nowrap}
+ #tuning .field input{height:24px;margin:4px 0 6px;touch-action:pan-x}
+ #tuning .field.mobile-hide,#tuning .full.mobile-hide{display:none!important}
+ #tuning .help{font-size:10px;line-height:1.35}
+ #panel .presetbox{display:none;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0;padding:5px 2px 12px}
+ #panel.mobile-presets #tuning{display:none}
+ #panel.mobile-presets .presetbox{display:block}
+ #panel .presetbox .bar{gap:4px}
+ #panel .presetbox button{font-size:10px;padding:8px 5px}
+ #panel .presetbox input{font-size:11px}
+ #hud{right:8px;left:8px;top:calc(env(safe-area-inset-top) + 6px)}
+ #hud small{font-size:10px;max-width:68%;line-height:1.35}
+ #status{font-size:11px;padding:6px 8px}
+}
+@media(max-width:370px){#panel>.bar button{font-size:9px}#tuning{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <video id="camera" muted autoplay playsinline></video><div id="view"></div><canvas id="handLayer"></canvas><canvas id="debug"></canvas>
 <div id="hud"><div id="status">等待启动</div><small>单手钓鱼竿 · MANIFESTO 远距识别 · 光流稳定追踪 · 透视水面 · 手部遮挡</small></div>
-<div id="panel"><div class="head"><span id="modelName">FishingRod_Lvl1.glb</span><button id="showSettings">收起校准</button></div><div class="bar"><button id="switchCamera" disabled>切换镜头</button><button id="toggleDebug" disabled>显示关键点</button><button id="calibrate" disabled>校准当前距离</button><button id="reset">重置参数</button></div><div id="tuning">
+<div id="panel"><div class="head"><span id="modelName">FishingRod_Lvl1.glb</span><div class="headButtons"><button id="dockPanel" type="button" title="上下切换校准面板位置">⇅ 移动</button><button id="showSettings">收起校准</button></div></div><div class="bar"><button id="switchCamera" disabled>切换镜头</button><button id="toggleDebug" disabled>显示关键点</button><button id="calibrate" disabled>校准当前距离</button><button id="reset">重置参数</button></div><nav id="mobileTabs" aria-label="手机校准分类"></nav><div id="tuning">
 <div class="field"><label>基础长度 <output id="sizeOut"></output></label><input id="size" type="range" min="100" max="750" step="10" value="300"></div>
 <div class="field"><label>旋转角度 <output id="rollOut"></output></label><input id="roll" type="range" min="-180" max="180" step="1" value="0"></div>
 <div class="field"><label>水平偏移 <output id="offsetXOut"></output></label><input id="offsetX" type="range" min="-160" max="160" step="1" value="0"></div>
@@ -39,7 +76,7 @@
 <div class="help full">遮挡模式：0=关闭，1=仅手背，2=始终遮挡。若检测手背时鱼竿没有被挡住，先将“反转手背判断”设为 1。遮挡宽度影响手指及掌缘的遮挡范围。「运动补偿」会将分割瞬间捕获的手部图像跟随最新手部骨骼变换；「分割更新间隔」越短，延迟可能越小，但 iPhone CPU/GPU 负担更高。开启「显示蒙版调试」可将识别到的手部区域标成绿色。分割模型会识别皮肤，但并不是专用手部实例模型。</div>
 <div class="help full">参数调整后会自动保存在本机浏览器。左右倾斜和前后倾斜现支持 ±180°；手机端若整体相差半圈，可尝试左右倾斜设为 +180° 或 -180°。距离基准因设备摄像头不同，仍需在 iPhone 上单独校准。<br>用 worldLandmarks 三维骨架控制旋转，指向镜头时鱼竿会向镜头倾斜。距离通过二维 / 三维骨骼投影比估算，与手掌翻转解耦。手在正常距离时点击“校准当前距离”。</div>
 </div>
-<div class="presetbox">
+<div class="presetbox" id="presets">
   <div class="presettitle">参数保存 · 跨设备同步</div>
   <div class="bar"><button id="savePreset">保存当前参数</button><button id="copyLink">复制参数链接</button><button id="exportPreset">导出 JSON</button></div>
   <div class="bar" style="margin-top:7px"><button id="importPreset">导入 JSON</button><button id="copyCode">复制参数码</button></div>
@@ -48,7 +85,7 @@
   <div class="help" id="saveStatus">滑块调整会自动保存在当前设备。Windows 的 localhost 链接不能在 iPhone 打开，请用 HTTPS 网站地址或参数码。</div>
 </div>
 </div></div>
-<div id="targetPreview" style="display:none;position:fixed;inset:12% 8%;z-index:8;background:#132330ed;border-radius:14px;padding:12px;text-align:center;overflow:auto"><img src="./targets/manifesto_target.jpg" alt="MANIFESTO 识别参考图" style="max-width:90%;max-height:80%;object-fit:contain"><p>这是经过透视校正的 MANIFESTO 封面参考图。识别的是封面，而不是桌面背景。</p><button id="closeTarget">关闭</button></div><div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.5</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并新增 MANIFESTO 纸板识别与水面。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
+<div id="targetPreview" style="display:none;position:fixed;inset:12% 8%;z-index:8;background:#132330ed;border-radius:14px;padding:12px;text-align:center;overflow:auto"><img src="./targets/manifesto_target.jpg" alt="MANIFESTO 识别参考图" style="max-width:90%;max-height:80%;object-fit:contain"><p>这是经过透视校正的 MANIFESTO 封面参考图。识别的是封面，而不是桌面背景。</p><button id="closeTarget">关闭</button></div><div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.6</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并新增 MANIFESTO 纸板识别与水面。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
 <script type="module">
 const $=id=>document.getElementById(id);
 const video=$('camera'),debug=$('debug'),ctx=debug.getContext('2d'),status=$('status');
@@ -158,7 +195,73 @@ $('reset').addEventListener('click',()=>{
  $('saveStatus').textContent='已恢复默认参数，并自动保存。';
 });
 $('calibrate').addEventListener('click',()=>{if(latestDistanceEstimate!==null){distanceBaseline=latestDistanceEstimate;lastDistanceEstimate=latestDistanceEstimate;setStatus('距离基准已重置 · 当前手部距离对应基础长度');}});
-$('showSettings').addEventListener('click',()=>{const hidden=$('tuning').classList.toggle('collapsed');$('showSettings').textContent=hidden?'展开校准':'收起校准';});
+$('showSettings').addEventListener('click',()=>{if(isMobilePanel())return;const hidden=$('tuning').classList.toggle('collapsed');$('showSettings').textContent=hidden?'展开校准':'收起校准';});
+
+// v1.6 compact mobile calibration; no AR tracking logic changed.
+const mobileTabs=[
+ {id:'pose',label:'姿态',keys:['size','roll','tilt','yaw','offsetX','offsetY','handle','palmZ']},
+ {id:'follow',label:'跟随',keys:['depth','speed','occlusion','invertBack','maskWidth','maskPreview','segInterval','motionComp']},
+ {id:'water',label:'水面',keys:['waterEnabled','waterOpacity','waveStrength','imageInterval','scanWidth','flowInterval','waterTest','showTarget']},
+ {id:'presets',label:'保存 / 导入',keys:[]}
+];
+const isMobilePanel=()=>matchMedia('(max-width:700px)').matches;
+let activeMobileTab='pose';
+const panelNode=$('panel');
+const tabNode=$('mobileTabs');
+const allTuneItems=Array.from($('tuning').children);
+function showMobileCategory(id){
+ activeMobileTab=id;
+ const group=mobileTabs.find(t=>t.id===id)||mobileTabs[0];
+ if(!isMobilePanel()){
+  panelNode.classList.remove('mobile-presets');
+  allTuneItems.forEach(el=>el.classList.remove('mobile-hide'));
+  return;
+ }
+ panelNode.classList.toggle('mobile-presets',id==='presets');
+ for(const el of allTuneItems){
+  const input=el.matches('.field')?el.querySelector('input'):null;
+  const keys=el.matches('.bar')?Array.from(el.querySelectorAll('button')).map(b=>b.id):[];
+  const visible=group.keys.includes(input?.id)||keys.some(k=>group.keys.includes(k));
+  el.classList.toggle('mobile-hide',!visible);
+ }
+ for(const btn of tabNode.querySelectorAll('button')){
+  btn.classList.toggle('active',btn.dataset.category===id);
+  btn.setAttribute('aria-pressed',btn.dataset.category===id?'true':'false');
+ }
+ $('tuning').scrollTop=0;
+}
+for(const tab of mobileTabs){
+ const btn=document.createElement('button');btn.type='button';btn.textContent=tab.label;
+ btn.dataset.category=tab.id;
+ btn.addEventListener('click',()=>{panelNode.classList.remove('mobile-collapsed');$('showSettings').textContent='收起校准';showMobileCategory(tab.id);});
+ tabNode.appendChild(btn);
+}
+$('dockPanel').addEventListener('click',()=>{
+ const top=panelNode.classList.toggle('mobile-top');
+ $('dockPanel').textContent=top?'⇵ 下移':'⇅ 上移';
+});
+$('showSettings').addEventListener('click',()=>{
+ if(!isMobilePanel())return;
+ // Original desktop handler has already run; override its grid visibility on mobile.
+ const collapsed=panelNode.classList.toggle('mobile-collapsed');
+ $('tuning').classList.remove('collapsed');
+ $('showSettings').textContent=collapsed?'展开':'收起校准';
+ if(!collapsed)showMobileCategory(activeMobileTab);
+});
+function refreshMobileLayout(){
+ if(isMobilePanel()){
+  $('tuning').classList.remove('collapsed');
+  $('showSettings').textContent=panelNode.classList.contains('mobile-collapsed')?'展开':'收起校准';
+  showMobileCategory(activeMobileTab);
+ }else{
+  panelNode.classList.remove('mobile-collapsed','mobile-top','mobile-presets');
+  $('dockPanel').textContent='⇅ 移动';
+  allTuneItems.forEach(el=>el.classList.remove('mobile-hide'));
+ }
+}
+addEventListener('resize',refreshMobileLayout);
+refreshMobileLayout();
+
 function setStatus(message){status.textContent=message;}
 async function loadDependencies(){
  setStatus('正在加载 Three.js + GLTFLoader…');
