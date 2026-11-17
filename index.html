@@ -10,7 +10,7 @@
 </head>
 <body>
 <video id="camera" muted autoplay playsinline></video><div id="view"></div><canvas id="handLayer"></canvas><canvas id="debug"></canvas>
-<div id="hud"><div id="status">等待启动</div><small>单手钓鱼竿 · MANIFESTO 封面图像识别 · 透视水面 · 手部遮挡</small></div>
+<div id="hud"><div id="status">等待启动</div><small>单手钓鱼竿 · MANIFESTO 远距识别 · 光流稳定追踪 · 透视水面 · 手部遮挡</small></div>
 <div id="panel"><div class="head"><span id="modelName">FishingRod_Lvl1.glb</span><button id="showSettings">收起校准</button></div><div class="bar"><button id="switchCamera" disabled>切换镜头</button><button id="toggleDebug" disabled>显示关键点</button><button id="calibrate" disabled>校准当前距离</button><button id="reset">重置参数</button></div><div id="tuning">
 <div class="field"><label>基础长度 <output id="sizeOut"></output></label><input id="size" type="range" min="100" max="750" step="10" value="300"></div>
 <div class="field"><label>旋转角度 <output id="rollOut"></output></label><input id="roll" type="range" min="-180" max="180" step="1" value="0"></div>
@@ -31,9 +31,11 @@
 <div class="field"><label>MANIFESTO 水面 <output id="waterEnabledOut"></output></label><input id="waterEnabled" type="range" min="0" max="1" step="1" value="1"></div>
 <div class="field"><label>水面透明度 <output id="waterOpacityOut"></output></label><input id="waterOpacity" type="range" min="10" max="95" step="5" value="65"></div>
 <div class="field"><label>涟漪强度 <output id="waveStrengthOut"></output></label><input id="waveStrength" type="range" min="0" max="200" step="5" value="100"></div>
-<div class="field"><label>识别更新间隔 <output id="imageIntervalOut"></output></label><input id="imageInterval" type="range" min="250" max="1200" step="50" value="500"></div>
+<div class="field"><label>重新识别间隔 <output id="imageIntervalOut"></output></label><input id="imageInterval" type="range" min="250" max="1200" step="50" value="650"></div>
+<div class="field"><label>远距离识别精度 <output id="scanWidthOut"></output></label><input id="scanWidth" type="range" min="640" max="1120" step="80" value="960"></div>
+<div class="field"><label>持续追踪间隔 <output id="flowIntervalOut"></output></label><input id="flowInterval" type="range" min="70" max="240" step="10" value="120"></div>
 <div class="bar full"><button id="waterTest">测试水波/抛竿</button><button id="showTarget">查看识别目标</button></div>
-<div class="help full">将摄像头对准 MANIFESTO 纸板封面即可在封面上出现水面。捏合拇指和食指抛竿，或点击「测试水波」。OpenCV 图像识别计算量较大；iPhone 若卡顿请将识别更新间隔调到 700–1000 ms。真实纸板应有相同的 MANIFESTO 标题及比例；识别不稳时请用 targets/manifesto_target.jpg 对照校准。</div>
+<div class="help full">将摄像头对准 MANIFESTO 纸板封面即可在封面上出现水面。捏合拇指和食指抛竿，或点击「测试水波」。远距离识别优先使用 960px；iPhone 如明显卡顿，可降到 800px。首次检测用 ORB，找到后用光流持续追踪；图像本身纹理稀疏仍会限制距离。真实纸板应有相同的 MANIFESTO 标题及比例；识别不稳时请用 targets/manifesto_target.jpg 对照校准。</div>
 <div class="help full">遮挡模式：0=关闭，1=仅手背，2=始终遮挡。若检测手背时鱼竿没有被挡住，先将“反转手背判断”设为 1。遮挡宽度影响手指及掌缘的遮挡范围。「运动补偿」会将分割瞬间捕获的手部图像跟随最新手部骨骼变换；「分割更新间隔」越短，延迟可能越小，但 iPhone CPU/GPU 负担更高。开启「显示蒙版调试」可将识别到的手部区域标成绿色。分割模型会识别皮肤，但并不是专用手部实例模型。</div>
 <div class="help full">参数调整后会自动保存在本机浏览器。左右倾斜和前后倾斜现支持 ±180°；手机端若整体相差半圈，可尝试左右倾斜设为 +180° 或 -180°。距离基准因设备摄像头不同，仍需在 iPhone 上单独校准。<br>用 worldLandmarks 三维骨架控制旋转，指向镜头时鱼竿会向镜头倾斜。距离通过二维 / 三维骨骼投影比估算，与手掌翻转解耦。手在正常距离时点击“校准当前距离”。</div>
 </div>
@@ -46,7 +48,7 @@
   <div class="help" id="saveStatus">滑块调整会自动保存在当前设备。Windows 的 localhost 链接不能在 iPhone 打开，请用 HTTPS 网站地址或参数码。</div>
 </div>
 </div></div>
-<div id="targetPreview" style="display:none;position:fixed;inset:12% 8%;z-index:8;background:#132330ed;border-radius:14px;padding:12px;text-align:center;overflow:auto"><img src="./targets/manifesto_target.jpg" alt="MANIFESTO 识别参考图" style="max-width:90%;max-height:80%;object-fit:contain"><p>这是经过透视校正的 MANIFESTO 封面参考图。识别的是封面，而不是桌面背景。</p><button id="closeTarget">关闭</button></div><div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.4</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并新增 MANIFESTO 纸板识别与水面。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
+<div id="targetPreview" style="display:none;position:fixed;inset:12% 8%;z-index:8;background:#132330ed;border-radius:14px;padding:12px;text-align:center;overflow:auto"><img src="./targets/manifesto_target.jpg" alt="MANIFESTO 识别参考图" style="max-width:90%;max-height:80%;object-fit:contain"><p>这是经过透视校正的 MANIFESTO 封面参考图。识别的是封面，而不是桌面背景。</p><button id="closeTarget">关闭</button></div><div id="startLayer"><div class="intro"><h1>AR Fishing Rod v1.5</h1><p>已经接入你的 <b>FishingRod_Lvl1</b> 模型，并新增 MANIFESTO 纸板识别与水面。<br>打开摄像头，将一只手放入画面，鱼竿绑定掌心并根据距离缩放、姿态旋转。<br>Windows 使用 localhost；iPhone Safari 需要 HTTPS。</p><button id="start" class="primary">启动摄像头与手部追踪</button><div id="introError"></div></div></div>
 <script type="module">
 const $=id=>document.getElementById(id);
 const video=$('camera'),debug=$('debug'),ctx=debug.getContext('2d'),status=$('status');
@@ -62,7 +64,7 @@ let lastHandPoints=null,lastHandedness='Right';
 const maskCanvas=document.createElement('canvas'),maskCtx=maskCanvas.getContext('2d',{willReadFrequently:true});
 const roiCanvas=document.createElement('canvas'),roiCtx=roiCanvas.getContext('2d');
 const compositeCanvas=document.createElement('canvas'),compositeCtx=compositeCanvas.getContext('2d');
-const defaults={size:300,roll:0,offsetX:0,offsetY:0,tilt:0,yaw:0,depth:100,speed:85,handle:25,palmZ:10,occlusion:1,invertBack:0,maskWidth:115,maskPreview:0,segInterval:100,motionComp:1,waterEnabled:1,waterOpacity:65,waveStrength:100,imageInterval:500};
+const defaults={size:300,roll:0,offsetX:0,offsetY:0,tilt:0,yaw:0,depth:100,speed:85,handle:25,palmZ:10,occlusion:1,invertBack:0,maskWidth:115,maskPreview:0,segInterval:100,motionComp:1,waterEnabled:1,waterOpacity:65,waveStrength:100,imageInterval:650,scanWidth:960,flowInterval:120};
 const config={...defaults};
 const STORAGE_KEY='AR_FISHING_ROD_V09_PRESET';
 function cleanPreset(candidate){
@@ -113,11 +115,11 @@ for(const key of Object.keys(config)){
  const el=$(key),out=$(key+'Out');
  const set=()=>{
   config[key]=Number(el.value);
-  out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':key==='segInterval'?' ms':key==='motionComp'||key==='waterEnabled'?' (0关/1开)':key==='waterOpacity'?'%':key==='waveStrength'?'%':key==='imageInterval'?' ms':'');
+  out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':key==='segInterval'?' ms':key==='motionComp'||key==='waterEnabled'?' (0关/1开)':key==='waterOpacity'?'%':key==='waveStrength'?'%':key==='imageInterval'||key==='flowInterval'?' ms':key==='scanWidth'?' px':'');
   saveConfig();
  };
  el.addEventListener('input',set);
- out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':key==='segInterval'?' ms':key==='motionComp'||key==='waterEnabled'?' (0关/1开)':key==='waterOpacity'?'%':key==='waveStrength'?'%':key==='imageInterval'?' ms':'');
+ out.textContent=config[key]+(key==='size'?' px':key.startsWith('offset')||key==='handle'||key==='palmZ'?' px':key==='roll'||key==='tilt'||key==='yaw'?'°':key==='maskWidth'?'%':key==='occlusion'?' (0关/1手背/2始终)':key==='invertBack'?' (0正常/1反转)':key==='segInterval'?' ms':key==='motionComp'||key==='waterEnabled'?' (0关/1开)':key==='waterOpacity'?'%':key==='waveStrength'?'%':key==='imageInterval'||key==='flowInterval'?' ms':key==='scanWidth'?' px':'');
 }
 try{
  const fromURL=new URL(location.href).searchParams.get('cfg');
@@ -462,9 +464,10 @@ function track(points,world,now,handedness){
  debugHand(points);
 }
 
-// MANIFESTO reference-image tracking + screen-space perspective water surface
+// MANIFESTO: distant ORB detection + continuous pyramidal Lucas-Kanade tracking
 let cvEngine=null,orbDetector=null,matcher=null,refKeypoints=null,refDescriptors=null;
 let referenceWidth=0,referenceHeight=0,cvReady=false,imageLastRun=0,imageRunning=false;
+let flowLastRun=0,trackGray=null,trackRefPts=[],trackScenePts=[],trackQuality=0;
 let imageSearchCanvas=document.createElement('canvas'),imageSearchCtx=imageSearchCanvas.getContext('2d',{willReadFrequently:true});
 let imageTargetCanvas=document.createElement('canvas'),imageTargetCtx=imageTargetCanvas.getContext('2d',{willReadFrequently:true});
 let waterMesh=null,waterMaterial=null,waterVertices=null,waterGeometry=null,waterLocated=false,waterCorners=null,lastWaterSeen=0;
@@ -477,37 +480,39 @@ async function loadImageTracker(){
  setStatus('正在加载本地图像识别引擎 OpenCV…');
  if(!window.cv){
   await new Promise((resolve,reject)=>{
-   const script=document.createElement('script');script.src='./vendor/opencv.js';script.onload=resolve;script.onerror=()=>reject(Error('缺少 vendor/opencv.js，请运行新版 setup.bat 并上传该文件到 GitHub'));document.head.appendChild(script);
+   const script=document.createElement('script');script.src='./vendor/opencv.js';script.onload=resolve;script.onerror=()=>reject(Error('缺少 vendor/opencv.js，请运行 setup.bat'));document.head.appendChild(script);
   });
  }
  let instance=window.cv;
  if(instance&&typeof instance.then==='function')instance=await instance;
  if(!instance?.Mat){
   await new Promise((resolve,reject)=>{
-   const timeout=setTimeout(()=>reject(Error('OpenCV 初始化超时，请检查文件是否完整')),20000);
+   const timeout=setTimeout(()=>reject(Error('OpenCV 初始化超时')),20000);
    if(window.cv?.Mat){clearTimeout(timeout);resolve();return;}
    if(window.cv)window.cv.onRuntimeInitialized=()=>{clearTimeout(timeout);resolve();};
   });
   instance=window.cv;
  }
  cvEngine=instance;
- if(cvEngine.ORB?.create)orbDetector=cvEngine.ORB.create(750);
- else if(cvEngine.ORB)orbDetector=new cvEngine.ORB(750);
- else throw Error('当前 OpenCV.js 未包含 ORB 特征提取器。请使用 setup.bat 安装的版本。');
+ if(cvEngine.ORB?.create)orbDetector=cvEngine.ORB.create(1800);
+ else if(cvEngine.ORB)orbDetector=new cvEngine.ORB(1800);
+ else throw Error('当前 OpenCV.js 未包含 ORB 特征提取器');
  matcher=new cvEngine.BFMatcher(cvEngine.NORM_HAMMING,false);
  const image=new Image();image.src='./targets/manifesto_target.jpg';await image.decode();
- imageTargetCanvas.width=480;imageTargetCanvas.height=Math.round(480*image.naturalHeight/image.naturalWidth);
+ imageTargetCanvas.width=800;imageTargetCanvas.height=Math.round(800*image.naturalHeight/image.naturalWidth);
  imageTargetCtx.drawImage(image,0,0,imageTargetCanvas.width,imageTargetCanvas.height);
  referenceWidth=imageTargetCanvas.width;referenceHeight=imageTargetCanvas.height;
  const rgba=cvEngine.imread(imageTargetCanvas),gray=new cvEngine.Mat();
  cvEngine.cvtColor(rgba,gray,cvEngine.COLOR_RGBA2GRAY);
  refKeypoints=new cvEngine.KeyPointVector();refDescriptors=new cvEngine.Mat();
- orbDetector.detectAndCompute(gray,new cvEngine.Mat(),refKeypoints,refDescriptors);
- rgba.delete();gray.delete();
- if(refDescriptors.rows<20)throw Error('MANIFESTO 图片缺少足够的特征点，请更换清晰正面照片');
- cvReady=true;setStatus('识别引擎已准备 · 对准 MANIFESTO 封面');
+ const empty=new cvEngine.Mat();
+ orbDetector.detectAndCompute(gray,empty,refKeypoints,refDescriptors);
+ rgba.delete();gray.delete();empty.delete();
+ if(refDescriptors.rows<16)throw Error('MANIFESTO 封面可检测特征过少，建议使用高清正面参考图');
+ cvReady=true;setStatus('远距追踪已准备 · 对准 MANIFESTO 封面');
 }
-function resetWaterTracking(){waterLocated=false;waterCorners=null;lastWaterSeen=0;imageLastRun=0;isCasting=false;pinchPrevious=false;}
+function clearFlow(){if(trackGray){trackGray.delete();trackGray=null;}trackRefPts=[];trackScenePts=[];trackQuality=0;}
+function resetWaterTracking(){waterLocated=false;waterCorners=null;lastWaterSeen=0;imageLastRun=0;flowLastRun=0;clearFlow();isCasting=false;pinchPrevious=false;}
 function initWaterSurface(){
  const positions=[],uvs=[],indices=[];
  for(let y=0;y<=waterGridY;y++)for(let x=0;x<=waterGridX;x++){
@@ -530,71 +535,138 @@ function initWaterSurface(){
  waterLine=new THREE.Line(lineGeo,new THREE.LineBasicMaterial({color:0xe3e9e2,transparent:true,opacity:.85}));waterLine.visible=false;scene.add(waterLine);
  waterFloat=new THREE.Mesh(new THREE.SphereGeometry(7,10,8),new THREE.MeshBasicMaterial({color:0xe94131}));waterFloat.visible=false;scene.add(waterFloat);
 }
-function downscaleVideoForTracking(){
+function currentTrackingFrame(){
  const vw=video.videoWidth,vh=video.videoHeight;
- const w=Math.min(480,vw),h=Math.round(vh*w/vw);
- if(imageSearchCanvas.width!==w||imageSearchCanvas.height!==h){imageSearchCanvas.width=w;imageSearchCanvas.height=h;}
- imageSearchCtx.setTransform(1,0,0,1,0,0);imageSearchCtx.drawImage(video,0,0,w,h);
- return {w,h};
+ const w=Math.min(config.scanWidth,vw),h=Math.max(1,Math.round(vh*w/vw));
+ if(imageSearchCanvas.width!==w||imageSearchCanvas.height!==h){imageSearchCanvas.width=w;imageSearchCanvas.height=h;clearFlow();}
+ imageSearchCtx.setTransform(1,0,0,1,0,0);
+ imageSearchCtx.drawImage(video,0,0,w,h);
+ const cv=cvEngine,rgba=cv.imread(imageSearchCanvas),gray=new cv.Mat();
+ cv.cvtColor(rgba,gray,cv.COLOR_RGBA2GRAY);rgba.delete();
+ return {gray,w,h};
 }
-function imageMatchesVideo(t){
- const cv=cvEngine,{w,h}=downscaleVideoForTracking();
- let rgba=null,gray=null,kpts=null,desc=null,pairs=null,srcMat=null,dstMat=null,H=null,inliers=null,empty=null;
+function homographyForPoints(reference,scenePoints,threshold=3){
+ const cv=cvEngine;
+ if(reference.length<16||reference.length!==scenePoints.length)return null;
+ const source=cv.matFromArray(reference.length/2,1,cv.CV_32FC2,reference);
+ const dest=cv.matFromArray(scenePoints.length/2,1,cv.CV_32FC2,scenePoints);
+ const inliers=new cv.Mat();
+ let H=null;
  try{
-  rgba=cv.imread(imageSearchCanvas);gray=new cv.Mat();cv.cvtColor(rgba,gray,cv.COLOR_RGBA2GRAY);
-  kpts=new cv.KeyPointVector();desc=new cv.Mat();empty=new cv.Mat();
-  orbDetector.detectAndCompute(gray,empty,kpts,desc);
-  if(desc.rows<14)return null;
-  pairs=new cv.DMatchVectorVector();matcher.knnMatch(refDescriptors,desc,pairs,2);
-  const source=[],destination=[];
-  for(let i=0;i<pairs.size();i++){
-   const p=pairs.get(i);if(p.size()<2)continue;
-   const a=p.get(0),b=p.get(1);
-   if(a.distance>=.73*b.distance)continue;
-   const kp0=refKeypoints.get(a.queryIdx),kp1=kpts.get(a.trainIdx);
-   source.push(kp0.pt.x,kp0.pt.y);destination.push(kp1.pt.x,kp1.pt.y);
-  }
-  if(source.length<24)return null;
-  srcMat=cv.matFromArray(source.length/2,1,cv.CV_32FC2,source);
-  dstMat=cv.matFromArray(destination.length/2,1,cv.CV_32FC2,destination);
-  inliers=new cv.Mat();H=cv.findHomography(srcMat,dstMat,cv.RANSAC,4,inliers);
+  H=cv.findHomography(source,dest,cv.RANSAC,threshold,inliers);
   if(!H||H.rows!==3)return null;
-  let good=0;for(let i=0;i<inliers.rows;i++)good+=inliers.data[i]?1:0;
-  if(good<9||good/(source.length/2)<.28)return null;
+  const inlierRef=[],inlierScene=[];
+  for(let i=0;i<inliers.rows;i++){
+   if(!inliers.data[i])continue;
+   inlierRef.push(reference[i*2],reference[i*2+1]);
+   inlierScene.push(scenePoints[i*2],scenePoints[i*2+1]);
+  }
+  if(inlierRef.length<16)return null;
   const a=H.data64F?.length===9?H.data64F:H.data32F;
   const corners=[[0,0],[referenceWidth,0],[referenceWidth,referenceHeight],[0,referenceHeight]].map(([x,y])=>{
    const d=a[6]*x+a[7]*y+a[8];return {x:(a[0]*x+a[1]*y+a[2])/d,y:(a[3]*x+a[4]*y+a[5])/d};
   });
-  if(corners.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))return null;
-  let area=0;for(let i=0;i<4;i++){const p=corners[i],q=corners[(i+1)%4];area+=p.x*q.y-q.x*p.y;}
-  area=Math.abs(area)*.5;
-  if(area<w*h*.016||area>w*h*1.8)return null;
-  const crosses=[];for(let i=0;i<4;i++){
-   const a=corners[i],b=corners[(i+1)%4],c=corners[(i+2)%4];crosses.push((b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x));
-  }
-  if(!(crosses.every(v=>v>0)||crosses.every(v=>v<0)))return null;
-  const fac=video.videoWidth/w;
-  return corners.map(p=>({x:p.x*fac,y:p.y*fac}));
- }finally{
-  for(const obj of [rgba,gray,kpts,desc,pairs,srcMat,dstMat,H,inliers,empty]){try{obj?.delete();}catch(e){}}
+  return {corners,reference:inlierRef,scene:inlierScene,count:inlierRef.length/2};
+ }finally{source.delete();dest.delete();inliers.delete();H?.delete();}
+}
+function validateDetectedQuad(points,w,h){
+ if(!points||points.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))return false;
+ let area=0;
+ for(let i=0;i<4;i++){const p=points[i],q=points[(i+1)%4];area+=p.x*q.y-q.x*p.y;}
+ area=Math.abs(area)*.5;
+ // Old v1.4 minimum: 0.016 (1.6%). Distant covers can be far smaller.
+ if(area<w*h*.0015||area>w*h*1.35)return false;
+ const cross=[];
+ for(let i=0;i<4;i++){
+  const a=points[i],b=points[(i+1)%4],c=points[(i+2)%4];
+  cross.push((b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x));
  }
+ if(!(cross.every(v=>v>0)||cross.every(v=>v<0)))return false;
+ const side=i=>Math.hypot(points[i].x-points[(i+1)%4].x,points[i].y-points[(i+1)%4].y);
+ if(Math.min(...[0,1,2,3].map(side))<13)return false;
+ const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
+ if(Math.max(...xs)<-w*.15||Math.min(...xs)>w*1.15||Math.max(...ys)<-h*.15||Math.min(...ys)>h*1.15)return false;
+ return true;
+}
+function orbLocate(gray,w,h){
+ const cv=cvEngine;
+ let kpts=null,desc=null,pairs=null,empty=null;
+ try{
+  kpts=new cv.KeyPointVector();desc=new cv.Mat();empty=new cv.Mat();
+  orbDetector.detectAndCompute(gray,empty,kpts,desc);
+  if(desc.rows<10)return null;
+  pairs=new cv.DMatchVectorVector();matcher.knnMatch(refDescriptors,desc,pairs,2);
+  const refs=[],scenes=[];
+  for(let i=0;i<pairs.size();i++){
+   const pair=pairs.get(i);if(pair.size()<2){pair.delete?.();continue;}
+   const first=pair.get(0),second=pair.get(1);
+   if(first.distance<.80*second.distance){
+    const r=refKeypoints.get(first.queryIdx).pt,c=kpts.get(first.trainIdx).pt;
+    refs.push(r.x,r.y);scenes.push(c.x,c.y);
+   }
+   pair.delete?.();
+  }
+  if(refs.length<20)return null;
+  const result=homographyForPoints(refs,scenes,3.5);
+  if(!result||result.count<8||result.count<refs.length/2*.23||!validateDetectedQuad(result.corners,w,h))return null;
+  return result;
+ }finally{for(const o of [kpts,desc,pairs,empty])o?.delete();}
+}
+function opticalFlowLocate(gray,w,h){
+ const cv=cvEngine;
+ if(!trackGray||trackScenePts.length<20||typeof cv.calcOpticalFlowPyrLK!=='function')return null;
+ let prev=null,next=null,status=null,errors=null;
+ try{
+  prev=cv.matFromArray(trackScenePts.length/2,1,cv.CV_32FC2,trackScenePts);
+  next=new cv.Mat();status=new cv.Mat();errors=new cv.Mat();
+  cv.calcOpticalFlowPyrLK(trackGray,gray,prev,next,status,errors,new cv.Size(21,21),3);
+  const refs=[],scenes=[];
+  const values=next.data32F,valid=status.data;
+  for(let i=0;i<valid.length;i++){
+   if(!valid[i])continue;
+   const x=values[2*i],y=values[2*i+1];
+   if(!Number.isFinite(x)||!Number.isFinite(y)||x<-10||y<-10||x>w+10||y>h+10)continue;
+   refs.push(trackRefPts[2*i],trackRefPts[2*i+1]);scenes.push(x,y);
+  }
+  if(refs.length<20)return null;
+  const result=homographyForPoints(refs,scenes,3.2);
+  if(!result||result.count<8||result.count<refs.length/2*.50||!validateDetectedQuad(result.corners,w,h))return null;
+  return result;
+ }catch(e){console.warn('光流跟踪未启用，改为 ORB 重定位：',e.message);return null;}
+ finally{for(const o of [prev,next,status,errors])o?.delete();}
 }
 function screenVideoPixel(x,y){const vw=video.videoWidth,vh=video.videoHeight,s=Math.max(innerWidth/vw,innerHeight/vh),ox=(innerWidth-vw*s)/2,oy=(innerHeight-vh*s)/2;return {x:(front?vw-x:x)*s+ox,y:y*s+oy};}
 function updateWaterTracking(t){
- if(!cvReady||!config.waterEnabled||!video.videoWidth||imageRunning||t-imageLastRun<config.imageInterval)return;
- imageLastRun=t;imageRunning=true;
+ if(!cvReady||!config.waterEnabled||!video.videoWidth||imageRunning)return;
+ const hasFlow=!!trackGray&&trackScenePts.length>=20;
+ const flowDue=hasFlow&&t-flowLastRun>=config.flowInterval;
+ const orbDue=t-imageLastRun>=config.imageInterval;
+ if(!flowDue&&!orbDue)return;
+ imageRunning=true;
+ let frame=null;
  try{
-  const coords=imageMatchesVideo(t);
-  if(coords){
-   const mapped=coords.map(p=>screenVideoPixel(p.x,p.y));
-   if(waterCorners&&waterLocated){
-    const blend=.50;waterCorners=waterCorners.map((p,i)=>({x:p.x+(mapped[i].x-p.x)*blend,y:p.y+(mapped[i].y-p.y)*blend}));
-   }else waterCorners=mapped;
-   waterLocated=true;lastWaterSeen=t;
-  }else if(t-lastWaterSeen>1250){waterLocated=false;waterCorners=null;isCasting=false;}
+  frame=currentTrackingFrame();
+  let match=null,mode='';
+  if(flowDue){match=opticalFlowLocate(frame.gray,frame.w,frame.h);flowLastRun=t;if(match)mode='光流追踪';}
+  if(!match&&orbDue){imageLastRun=t;match=orbLocate(frame.gray,frame.w,frame.h);if(match)mode='ORB 识别';}
+  if(match){
+   const scale=video.videoWidth/frame.w;
+   const mapped=match.corners.map(p=>screenVideoPixel(p.x*scale,p.y*scale));
+   let blend=waterLocated?.70:1;
+   if(waterCorners){
+    const delta=mapped.reduce((sum,p,i)=>sum+Math.hypot(p.x-waterCorners[i].x,p.y-waterCorners[i].y),0)/4;
+    if(delta>Math.min(innerWidth,innerHeight)*.23)blend=.20;
+   }
+   waterCorners=waterCorners?waterCorners.map((p,i)=>({x:p.x+(mapped[i].x-p.x)*blend,y:p.y+(mapped[i].y-p.y)*blend})):mapped;
+   waterLocated=true;lastWaterSeen=t;trackQuality=match.count;
+   if(trackGray)trackGray.delete();trackGray=frame.gray;frame.gray=null;
+   trackRefPts=match.reference;trackScenePts=match.scene;
+   if(t-lastWaterStatus>1100){lastWaterStatus=t;setStatus('MANIFESTO '+mode+' · '+match.count+' 个有效点');}
+  }else if(t-lastWaterSeen>1850){waterLocated=false;waterCorners=null;isCasting=false;clearFlow();}
  }catch(e){console.warn('MANIFESTO 图像追踪错误',e);}
- finally{imageRunning=false;}
+ finally{frame?.gray?.delete();imageRunning=false;}
 }
+let lastWaterStatus=0;
 function sampleProjectedPoint(u,v){
  if(!waterCorners)return null;
  const p=waterCorners;
